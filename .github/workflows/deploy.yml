@@ -40,16 +40,6 @@ jobs:
       - name: Run tests
         run: vendor/bin/phpunit
 
-      - name: Check secrets
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-        run: |
-          if [ -z "$SSH_HOST" ]; then echo "::error::SSH_HOST is empty"; else echo "SSH_HOST is set"; fi
-          if [ -z "$SSH_USER" ]; then echo "::error::SSH_USER is empty"; else echo "SSH_USER is set"; fi
-          if [ -z "$DEPLOY_PATH" ]; then echo "::error::DEPLOY_PATH is empty"; else echo "DEPLOY_PATH is set"; fi
-
       - name: Deploy to VPS
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
@@ -62,10 +52,12 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
           ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" "
-            cd ${DEPLOY_PATH} &&
-            git pull origin main 2>&1 || git pull https://x-access-token:${GITHUB_TOKEN}@github.com/deaafrizal/shortnurl-tutor.git main 2>&1 &&
-            export COMPOSER_ALLOW_SUPERUSER=1 &&
-            composer install --no-dev --no-interaction --prefer-dist 2>&1 &&
-            php -l public/index.php index.php config/database.php src/Shorten.php src/Redirect.php src/NotFoundException.php &&
+            set -e
+            cd ${DEPLOY_PATH}
+            git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/deaafrizal/shortnurl-tutor.git
+            git pull origin main
+            export COMPOSER_ALLOW_SUPERUSER=1
+            composer install --no-dev --no-interaction --prefer-dist 2>&1
+            php -l public/index.php index.php config/database.php src/Shorten.php src/Redirect.php src/NotFoundException.php
             systemctl reload php8.3-fpm || true
           "
