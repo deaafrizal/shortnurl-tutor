@@ -55,11 +55,43 @@ $baseUrl = rtrim(getenv('BASE_URL') ?: 'http://localhost', '/');
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DEASHORTN</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up { animation: fadeInUp 0.5s ease-out both; }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out both; }
+        .animate-slide-down { animation: slideDown 0.4s ease-out both; }
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-200 { animation-delay: 0.2s; }
+        .delay-300 { animation-delay: 0.3s; }
+    </style>
 </head>
-<body class="bg-slate-900 min-h-screen flex items-start justify-center pt-12 px-4">
+<body class="bg-slate-900 min-h-screen flex items-start justify-center pt-24 px-4">
+
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 animate-slide-down">
+        <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+            <a href="/" class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 font-extrabold text-xl tracking-tight">
+                DEASHORTN
+            </a>
+            <div class="flex items-center gap-6 text-sm">
+                <a href="/" class="text-slate-300 hover:text-indigo-400 transition-colors duration-200">Home</a>
+                <a href="#urls" class="text-slate-300 hover:text-indigo-400 transition-colors duration-200">My URLs</a>
+            </div>
+        </div>
+    </nav>
 
     <div class="w-full max-w-3xl">
-        <div class="text-center mb-10">
+        <div class="text-center mb-10 animate-fade-in-up">
             <h1 class="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">
                 DEASHORTN
             </h1>
@@ -67,20 +99,20 @@ $baseUrl = rtrim(getenv('BASE_URL') ?: 'http://localhost', '/');
         </div>
 
         <?php if ($success): ?>
-            <div class="bg-emerald-900/50 border border-emerald-700 text-emerald-300 px-5 py-3 rounded-lg mb-6 text-sm flex items-center gap-2">
+            <div class="bg-emerald-900/50 border border-emerald-700 text-emerald-300 px-5 py-3 rounded-lg mb-6 text-sm flex items-center gap-2 animate-fade-in">
                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 <?= htmlspecialchars($success) ?>
             </div>
         <?php endif; ?>
 
         <?php if ($error): ?>
-            <div class="bg-red-900/50 border border-red-700 text-red-300 px-5 py-3 rounded-lg mb-6 text-sm flex items-center gap-2">
+            <div class="bg-red-900/50 border border-red-700 text-red-300 px-5 py-3 rounded-lg mb-6 text-sm flex items-center gap-2 animate-fade-in">
                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 <?= htmlspecialchars($error) ?>
             </div>
         <?php endif; ?>
 
-        <div class="bg-slate-800/70 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 mb-8 shadow-xl">
+        <div class="bg-slate-800/70 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 mb-8 shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-300 animate-fade-in-up delay-100">
             <form method="POST" action="" class="flex flex-col sm:flex-row gap-3">
                 <input
                     type="url"
@@ -91,7 +123,7 @@ $baseUrl = rtrim(getenv('BASE_URL') ?: 'http://localhost', '/');
                 >
                 <button
                     type="submit"
-                    class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold px-6 py-3 rounded-xl transition duration-200 shadow-lg shadow-indigo-900/40"
+                    class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 hover:scale-105 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200 shadow-lg shadow-indigo-900/40 active:scale-95"
                 >
                     Shorten
                 </button>
@@ -99,7 +131,7 @@ $baseUrl = rtrim(getenv('BASE_URL') ?: 'http://localhost', '/');
         </div>
 
         <?php if ($newUrl): ?>
-            <div class="bg-slate-800/70 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 mb-8 shadow-xl">
+            <div class="bg-slate-800/70 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 mb-8 shadow-xl animate-fade-in-up delay-200">
                 <p class="text-slate-400 text-sm mb-2">Your shortened URL:</p>
                 <div class="flex items-center gap-3">
                     <a href="<?= htmlspecialchars($newUrl) ?>" target="_blank"
@@ -107,7 +139,7 @@ $baseUrl = rtrim(getenv('BASE_URL') ?: 'http://localhost', '/');
                         <?= htmlspecialchars($newUrl) ?>
                     </a>
                     <button onclick="copyToClipboard('<?= htmlspecialchars($newUrl) ?>', this)"
-                            class="shrink-0 bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1.5 copy-btn"
+                            class="shrink-0 bg-slate-700 hover:bg-slate-600 hover:scale-105 text-slate-200 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 copy-btn"
                             data-copied="Copied!">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                         Copy
@@ -117,7 +149,7 @@ $baseUrl = rtrim(getenv('BASE_URL') ?: 'http://localhost', '/');
         <?php endif; ?>
 
         <?php if (count($urls) > 0): ?>
-            <div class="bg-slate-800/70 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 shadow-xl overflow-x-auto">
+            <div id="urls" class="bg-slate-800/70 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 shadow-xl overflow-x-auto hover:shadow-2xl transition-all duration-300 animate-fade-in-up delay-300">
                 <h2 class="text-slate-200 text-lg font-semibold mb-4">Recently Shortened</h2>
                 <table class="w-full text-left text-sm">
                     <thead>
@@ -159,7 +191,7 @@ $baseUrl = rtrim(getenv('BASE_URL') ?: 'http://localhost', '/');
                                 </td>
                                 <td class="py-3 text-right">
                                     <button onclick="copyToClipboard('<?= htmlspecialchars($shortUrl) ?>', this)"
-                                            class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 copy-btn ml-auto"
+                                            class="bg-slate-700 hover:bg-slate-600 hover:scale-105 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5 copy-btn ml-auto"
                                             data-copied="Copied!">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                                         Copy
