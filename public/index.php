@@ -3,9 +3,11 @@
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../src/Shorten.php';
 require_once __DIR__ . '/../src/Redirect.php';
+require_once __DIR__ . '/../src/NotFoundException.php';
 
 use App\Shorten;
 use App\Redirect;
+use App\NotFoundException;
 
 $db = getDbConnection();
 $shorten = new Shorten($db);
@@ -13,7 +15,15 @@ $shorten = new Shorten($db);
 $code = $_GET['c'] ?? '';
 if ($code !== '') {
     $redirect = new Redirect($shorten);
-    $redirect->handle($code);
+    try {
+        $originalUrl = $redirect->handle($code);
+        header('Location: ' . $originalUrl, true, 302);
+        exit;
+    } catch (NotFoundException $e) {
+        header('HTTP/1.1 404 Not Found');
+        echo '<h1>404 - Short URL not found</h1>';
+        exit;
+    }
 }
 
 $success = null;
