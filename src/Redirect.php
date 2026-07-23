@@ -11,32 +11,22 @@ class Redirect
         $this->shorten = $shorten;
     }
 
-    public function handle(string $code): void
+    public function handle(string $code): string
     {
         $code = trim($code);
 
         if (!preg_match('/^[a-zA-Z0-9]{1,10}$/', $code)) {
-            $this->notFound();
-            return;
+            throw new NotFoundException('Short URL not found');
         }
 
         $url = $this->shorten->getUrlByCode($code);
 
         if (!$url) {
-            $this->notFound();
-            return;
+            throw new NotFoundException('Short URL not found');
         }
 
         $this->shorten->incrementClick((int) $url['id']);
 
-        header('Location: ' . $url['original_url'], true, 302);
-        exit;
-    }
-
-    private function notFound(): void
-    {
-        header('HTTP/1.1 404 Not Found');
-        echo '<h1>404 - Short URL not found</h1>';
-        exit;
+        return $url['original_url'];
     }
 }
