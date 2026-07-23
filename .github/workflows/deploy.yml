@@ -1,0 +1,55 @@
+name: Deploy ShortnURL
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.3
+          extensions: pdo, pdo_mysql, mbstring, xml, curl, bcmath
+          tools: composer:v2
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: PHP syntax check
+        run: |
+          find src config -name '*.php' -exec php -l {} \;
+          php -l public/index.php index.php
+
+      - name: Run tests
+        run: vendor/bin/phpunit
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}
+            git pull origin main
+            export COMPOSER_ALLOW_SUPERUSER=1
+            composer install --no-dev --no-interaction --prefer-dist
+            php -l public/index.php index.php config/database.php src/Shorten.php src/Redirect.php src/NotFoundException.php
+            systemctl reload php8.3-fpm || true
