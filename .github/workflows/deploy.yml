@@ -55,7 +55,6 @@ jobs:
           ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" "
             set -e
             cd ${DEPLOY_PATH}
-            git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/deaafrizal/shortnurl-tutor.git
             git pull origin main
             export COMPOSER_ALLOW_SUPERUSER=1
             composer install --no-dev --no-interaction --prefer-dist 2>&1
