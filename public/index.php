@@ -1,8 +1,197 @@
 <?php
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../src/Shorten.php';
+require_once __DIR__ . '/../src/Redirect.php';
 
-$appName = getenv('APP_NAME') ?: 'ShortnURL';
+use App\Shorten;
+use App\Redirect;
 
-echo "<h1>$appName</h1>";
-echo "<p>URL Shortener is running.</p>";
+$db = getDbConnection();
+$shorten = new Shorten($db);
+
+$code = $_GET['c'] ?? '';
+if ($code !== '') {
+    $redirect = new Redirect($shorten);
+    $redirect->handle($code);
+}
+
+$success = null;
+$error = null;
+$newUrl = null;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $originalUrl = $_POST['url'] ?? '';
+
+    try {
+        $created = $shorten->createShortUrl($originalUrl);
+        $baseUrl = rtrim(getenv('BASE_URL') ?: 'http://localhost', '/');
+        $newUrl = $baseUrl . '/?c=' . $created['short_code'];
+        $success = 'URL shortened successfully!';
+    } catch (\InvalidArgumentException $e) {
+        $error = $e->getMessage();
+    } catch (\Exception $e) {
+        $error = 'An error occurred. Please try again.';
+    }
+}
+
+$urls = $shorten->getAllUrls();
+$baseUrl = rtrim(getenv('BASE_URL') ?: 'http://localhost', '/');
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShortnURL</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 min-h-screen flex items-start justify-center pt-12 px-4">
+
+    <div class="w-full max-w-3xl">
+        <div class="text-center mb-10">
+            <h1 class="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">
+                ShortnURL
+            </h1>
+            <p class="text-slate-400 mt-2 text-lg">Paste a long URL and make it short</p>
+        </div>
+
+        <?php if ($success): ?>
+            <div class="bg-emerald-900/50 border border-emerald-700 text-emerald-300 px-5 py-3 rounded-lg mb-6 text-sm flex items-center gap-2">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <?= htmlspecialchars($success) ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($error): ?>
+            <div class="bg-red-900/50 border border-red-700 text-red-300 px-5 py-3 rounded-lg mb-6 text-sm flex items-center gap-2">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <?= htmlspecialchars($error) ?>
+            </div>
+        <?php endif; ?>
+
+        <div class="bg-slate-800/70 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 mb-8 shadow-xl">
+            <form method="POST" action="" class="flex flex-col sm:flex-row gap-3">
+                <input
+                    type="url"
+                    name="url"
+                    placeholder="https://example.com/very-long-url..."
+                    required
+                    class="flex-1 bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                >
+                <button
+                    type="submit"
+                    class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold px-6 py-3 rounded-xl transition duration-200 shadow-lg shadow-indigo-900/40"
+                >
+                    Shorten
+                </button>
+            </form>
+        </div>
+
+        <?php if ($newUrl): ?>
+            <div class="bg-slate-800/70 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 mb-8 shadow-xl">
+                <p class="text-slate-400 text-sm mb-2">Your shortened URL:</p>
+                <div class="flex items-center gap-3">
+                    <a href="<?= htmlspecialchars($newUrl) ?>" target="_blank"
+                       class="text-indigo-400 hover:text-indigo-300 underline break-all font-mono text-lg">
+                        <?= htmlspecialchars($newUrl) ?>
+                    </a>
+                    <button onclick="copyToClipboard('<?= htmlspecialchars($newUrl) ?>', this)"
+                            class="shrink-0 bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1.5 copy-btn"
+                            data-copied="Copied!">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                        Copy
+                    </button>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <?php if (count($urls) > 0): ?>
+            <div class="bg-slate-800/70 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 shadow-xl overflow-x-auto">
+                <h2 class="text-slate-200 text-lg font-semibold mb-4">Recently Shortened</h2>
+                <table class="w-full text-left text-sm">
+                    <thead>
+                        <tr class="text-slate-400 border-b border-slate-700">
+                            <th class="pb-3 pr-3">#</th>
+                            <th class="pb-3 pr-3 hidden md:table-cell">Original URL</th>
+                            <th class="pb-3 pr-3">Short URL</th>
+                            <th class="pb-3 pr-3 text-center">Clicks</th>
+                            <th class="pb-3 pr-3 hidden sm:table-cell">Created</th>
+                            <th class="pb-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php $i = 1; foreach ($urls as $url): ?>
+                            <?php
+                                $shortUrl = $baseUrl . '/?c=' . htmlspecialchars($url['short_code']);
+                                $displayUrl = mb_strlen($url['original_url']) > 50
+                                    ? mb_substr($url['original_url'], 0, 50) . '...'
+                                    : $url['original_url'];
+                            ?>
+                            <tr class="border-b border-slate-700/50 hover:bg-slate-700/30 transition">
+                                <td class="py-3 pr-3 text-slate-500"><?= $i++ ?></td>
+                                <td class="py-3 pr-3 hidden md:table-cell text-slate-300 max-w-[200px] truncate" title="<?= htmlspecialchars($url['original_url']) ?>">
+                                    <?= htmlspecialchars($displayUrl) ?>
+                                </td>
+                                <td class="py-3 pr-3">
+                                    <a href="<?= $shortUrl ?>" target="_blank"
+                                       class="text-indigo-400 hover:text-indigo-300 font-mono text-xs">
+                                        <?= htmlspecialchars($url['short_code']) ?>
+                                    </a>
+                                </td>
+                                <td class="py-3 pr-3 text-center">
+                                    <span class="bg-slate-700 text-slate-300 text-xs font-medium px-2 py-0.5 rounded-full">
+                                        <?= (int) $url['click_count'] ?>
+                                    </span>
+                                </td>
+                                <td class="py-3 pr-3 text-slate-400 text-xs hidden sm:table-cell">
+                                    <?= htmlspecialchars(date('M j, g:ia', strtotime($url['created_at']))) ?>
+                                </td>
+                                <td class="py-3 text-right">
+                                    <button onclick="copyToClipboard('<?= htmlspecialchars($shortUrl) ?>', this)"
+                                            class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 copy-btn ml-auto"
+                                            data-copied="Copied!">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                        Copy
+                                    </button>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+
+    </div>
+
+    <script>
+    function copyToClipboard(text, btn) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => showCopied(btn));
+        } else {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showCopied(btn);
+        }
+    }
+
+    function showCopied(btn) {
+        const original = btn.innerHTML;
+        btn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Copied!';
+        btn.classList.remove('bg-slate-700', 'hover:bg-slate-600');
+        btn.classList.add('bg-emerald-700', 'hover:bg-emerald-600');
+        setTimeout(() => {
+            btn.innerHTML = original;
+            btn.classList.remove('bg-emerald-700', 'hover:bg-emerald-600');
+            btn.classList.add('bg-slate-700', 'hover:bg-slate-600');
+        }, 2000);
+    }
+    </script>
+</body>
+</html>
