@@ -1,0 +1,22 @@
+{
+    "name": "deaafrizal/shortnurl",
+    "description": "URL Shortener built with PHP Native",
+    "type": "project",
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.0"
+    },
+    "scripts": {
+        "test": "phpunit",
+        "lint": "php -l src/ config/ public/index.php index.php"
+    }
+}
