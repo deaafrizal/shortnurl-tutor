@@ -40,6 +40,13 @@ jobs:
       - name: Run tests
         run: vendor/bin/phpunit
 
+      - name: Debug secrets
+        run: |
+          echo "SSH_HOST: '${{ secrets.SSH_HOST }}'"
+          echo "SSH_USER: '${{ secrets.SSH_USER }}'"
+          echo "DEPLOY_PATH: '${{ secrets.DEPLOY_PATH }}'"
+          echo "PRIVATE_KEY length: $(echo '${{ secrets.SSH_PRIVATE_KEY }}' | wc -c)"
+
       - name: Deploy to VPS
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
