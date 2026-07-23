@@ -53,7 +53,7 @@ $baseUrl = rtrim(getenv('BASE_URL') ?: 'http://localhost', '/');
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShortnURL</title>
+    <title>DEASHORTN</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 min-h-screen flex items-start justify-center pt-12 px-4">
@@ -61,7 +61,7 @@ $baseUrl = rtrim(getenv('BASE_URL') ?: 'http://localhost', '/');
     <div class="w-full max-w-3xl">
         <div class="text-center mb-10">
             <h1 class="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">
-                ShortnURL
+                DEASHORTN
             </h1>
             <p class="text-slate-400 mt-2 text-lg">Paste a long URL and make it short</p>
         </div>
