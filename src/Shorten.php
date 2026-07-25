@@ -124,9 +124,11 @@ class Shorten
         );
         $ips = $stmt->fetchAll(\PDO::FETCH_ASSOC);
         
-        // Anonymize IP addresses
-        foreach ($ips as &$row) {
-            $row['ip_address'] = IpAnonymizer::anonymize($row['ip_address']);
+        // Anonymize IP addresses only if IpAnonymizer is available
+        if (class_exists('App\IpAnonymizer')) {
+            foreach ($ips as &$row) {
+                $row['ip_address'] = IpAnonymizer::anonymize($row['ip_address']);
+            }
         }
         
         return $ips;
