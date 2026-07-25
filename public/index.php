@@ -41,6 +41,13 @@ $newUrl = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!Csrf::validate($_POST['_csrf_token'] ?? '')) {
         $error = 'Invalid form token. Please try again.';
+    } elseif (($_POST['_action'] ?? '') === 'delete') {
+        try {
+            $shorten->deleteUrlByCode($_POST['code'] ?? '', $myIp);
+            $success = 'URL deleted successfully!';
+        } catch (\RuntimeException $e) {
+            $error = $e->getMessage();
+        }
     } else {
     $originalUrl = $_POST['url'] ?? '';
 
@@ -198,7 +205,7 @@ if ($showIpList) {
                             <th class="pb-3 pr-3">Short URL</th>
                             <th class="pb-3 pr-3 text-center">Clicks</th>
                             <th class="pb-3 pr-3 hidden sm:table-cell">Created</th>
-                            <th class="pb-3"></th>
+                            <th class="pb-3"><?= $viewIp === $myIp ? 'Action' : '' ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -228,13 +235,24 @@ if ($showIpList) {
                                 <td class="py-3 pr-3 text-slate-400 text-xs hidden sm:table-cell">
                                     <?= htmlspecialchars(date('M j, g:ia', strtotime($url['created_at']))) ?>
                                 </td>
-                                <td class="py-3 text-right">
+                                <td class="py-3 text-right flex items-center gap-1">
                                     <button onclick="copyToClipboard('<?= htmlspecialchars($shortUrl) ?>', this)"
-                                            class="bg-slate-700 hover:bg-slate-600 hover:scale-105 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5 copy-btn ml-auto"
+                                            class="bg-slate-700 hover:bg-slate-600 hover:scale-105 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5 copy-btn"
                                             data-copied="Copied!">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                                         Copy
                                     </button>
+                                    <?php if ($viewIp === $myIp): ?>
+                                    <form method="POST" action="" class="inline" onsubmit="return confirm('Delete this short URL?')">
+                                        <input type="hidden" name="_csrf_token" value="<?= Csrf::getToken() ?>">
+                                        <input type="hidden" name="_action" value="delete">
+                                        <input type="hidden" name="code" value="<?= htmlspecialchars($url['short_code']) ?>">
+                                        <button type="submit" class="bg-red-800 hover:bg-red-700 hover:scale-105 text-red-300 px-2 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                            Delete
+                                        </button>
+                                    </form>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

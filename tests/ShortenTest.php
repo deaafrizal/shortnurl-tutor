@@ -219,6 +219,36 @@ class ShortenTest extends TestCase
         $this->assertEquals(5, (int) $result[0]['url_count']);
     }
 
+    public function testDeleteUrlByCodeSuccess(): void
+    {
+        $stmt = $this->createMockPdoStatement();
+        $stmt->method('execute')->willReturn(true);
+        $stmt->method('rowCount')->willReturn(1);
+
+        $pdo = $this->createMockPdo();
+        $pdo->method('prepare')->willReturn($stmt);
+
+        $shorten = new Shorten($pdo);
+        $shorten->deleteUrlByCode('abc123', '127.0.0.1');
+        $this->assertTrue(true);
+    }
+
+    public function testDeleteUrlByCodeNotOwnedThrowsException(): void
+    {
+        $stmt = $this->createMockPdoStatement();
+        $stmt->method('execute')->willReturn(true);
+        $stmt->method('rowCount')->willReturn(0);
+
+        $pdo = $this->createMockPdo();
+        $pdo->method('prepare')->willReturn($stmt);
+
+        $shorten = new Shorten($pdo);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('not found or you do not have permission');
+        $shorten->deleteUrlByCode('abc123', 'other-ip');
+    }
+
     public function testIncrementClickExecutesUpdate(): void
     {
         $stmt = $this->createMockPdoStatement();

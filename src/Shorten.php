@@ -115,6 +115,16 @@ class Shorten
         return $stmt->fetchAll();
     }
 
+    public function deleteUrlByCode(string $code, string $ip): void
+    {
+        $stmt = $this->db->prepare('DELETE FROM urls WHERE short_code = ? AND ip_address = ?');
+        $stmt->execute([$code, $ip]);
+
+        if ($stmt->rowCount() === 0) {
+            throw new \RuntimeException('URL not found or you do not have permission to delete it.');
+        }
+    }
+
     public function incrementClick(int $id): void
     {
         $stmt = $this->db->prepare('UPDATE urls SET click_count = click_count + 1 WHERE id = ?');
