@@ -189,6 +189,36 @@ class ShortenTest extends TestCase
         $this->assertEquals('abc123', $result[0]['short_code']);
     }
 
+    public function testGetAllIpsReturnsArray(): void
+    {
+        $expected = [
+            [
+                'ip_address' => '192.168.1.1',
+                'url_count' => '5',
+                'last_active' => '2026-07-25 12:00:00',
+            ],
+            [
+                'ip_address' => '10.0.0.1',
+                'url_count' => '2',
+                'last_active' => '2026-07-24 18:00:00',
+            ],
+        ];
+
+        $stmt = $this->createMockPdoStatement();
+        $stmt->method('fetchAll')->willReturn($expected);
+
+        $pdo = $this->createMockPdo();
+        $pdo->method('query')->willReturn($stmt);
+
+        $shorten = new Shorten($pdo);
+        $result = $shorten->getAllIps();
+
+        $this->assertIsArray($result);
+        $this->assertCount(2, $result);
+        $this->assertEquals('192.168.1.1', $result[0]['ip_address']);
+        $this->assertEquals(5, (int) $result[0]['url_count']);
+    }
+
     public function testIncrementClickExecutesUpdate(): void
     {
         $stmt = $this->createMockPdoStatement();

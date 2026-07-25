@@ -89,6 +89,17 @@ class Shorten
         return $row ?: null;
     }
 
+    public function getAllIps(): array
+    {
+        $stmt = $this->db->query(
+            'SELECT ip_address, COUNT(*) as url_count, MAX(created_at) as last_active
+             FROM urls WHERE ip_address != \'\'
+             GROUP BY ip_address
+             ORDER BY url_count DESC, last_active DESC'
+        );
+        return $stmt->fetchAll();
+    }
+
     public function getAllUrls(?string $ip = null): array
     {
         if ($ip !== null && $ip !== '') {

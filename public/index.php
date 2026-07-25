@@ -30,6 +30,10 @@ if ($code !== '') {
     }
 }
 
+$baseUrl = rtrim(getenv('BASE_URL') ?: 'http://localhost', '/');
+$myIp = Shorten::getClientIp();
+$viewIp = $_GET['ip'] ?? '';
+$showIpList = $viewIp === '';
 $success = null;
 $error = null;
 $newUrl = null;
@@ -41,8 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $originalUrl = $_POST['url'] ?? '';
 
     try {
-        $created = $shorten->createShortUrl($originalUrl, Shorten::getClientIp());
-        $baseUrl = rtrim(getenv('BASE_URL') ?: 'http://localhost', '/');
+        $created = $shorten->createShortUrl($originalUrl, $myIp);
         $newUrl = $baseUrl . '/?c=' . $created['short_code'];
         $success = 'URL shortened successfully!';
     } catch (\InvalidArgumentException $e) {
@@ -55,8 +58,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$baseUrl = rtrim(getenv('BASE_URL') ?: 'http://localhost', '/');
-$urls = $shorten->getAllUrls(Shorten::getClientIp());
+$urls = null;
+$ips = null;
+if ($showIpList) {
+    $ips = $shorten->getAllIps();
+} else {
+    $urls = $shorten->getAllUrls($viewIp);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -95,7 +103,7 @@ $urls = $shorten->getAllUrls(Shorten::getClientIp());
             </a>
             <div class="flex items-center gap-6 text-sm">
                 <a href="/" class="text-slate-300 hover:text-indigo-400 transition-colors duration-200">Home</a>
-                <a href="#urls" class="text-slate-300 hover:text-indigo-400 transition-colors duration-200">My URLs</a>
+                <a href="/?ip=<?= htmlspecialchars($myIp) ?>" class="text-slate-300 hover:text-indigo-400 transition-colors duration-200">My URLs</a>
             </div>
         </div>
     </nav>
@@ -141,9 +149,47 @@ $urls = $shorten->getAllUrls(Shorten::getClientIp());
             </form>
         </div>
 
-        <?php if (count($urls) > 0): ?>
-            <div id="urls" class="bg-slate-800/70 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 shadow-xl overflow-x-auto hover:shadow-2xl transition-all duration-300 animate-fade-in-up delay-300">
-                <h2 class="text-slate-200 text-lg font-semibold mb-4">My URLs</h2>
+        <?php if ($showIpList && $ips): ?>
+            <div class="bg-slate-800/70 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 shadow-xl overflow-x-auto hover:shadow-2xl transition-all duration-300 animate-fade-in-up delay-300">
+                <h2 class="text-slate-200 text-lg font-semibold mb-4">Active Users</h2>
+                <table class="w-full text-left text-sm">
+                    <thead>
+                        <tr class="text-slate-400 border-b border-slate-700">
+                            <th class="pb-3 pr-3">#</th>
+                            <th class="pb-3 pr-3">IP Address</th>
+                            <th class="pb-3 pr-3 text-center">URLs</th>
+                            <th class="pb-3 pr-3 hidden sm:table-cell">Last Active</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php $i = 1; foreach ($ips as $row): ?>
+                            <tr class="border-b border-slate-700/50 hover:bg-slate-700/30 transition">
+                                <td class="py-3 pr-3 text-slate-500"><?= $i++ ?></td>
+                                <td class="py-3 pr-3">
+                                    <a href="/?ip=<?= htmlspecialchars($row['ip_address']) ?>"
+                                       class="text-indigo-400 hover:text-indigo-300 font-mono text-xs">
+                                        <?= htmlspecialchars($row['ip_address']) ?>
+                                    </a>
+                                </td>
+                                <td class="py-3 pr-3 text-center">
+                                    <span class="bg-slate-700 text-slate-300 text-xs font-medium px-2 py-0.5 rounded-full">
+                                        <?= (int) $row['url_count'] ?>
+                                    </span>
+                                </td>
+                                <td class="py-3 pr-3 text-slate-400 text-xs hidden sm:table-cell">
+                                    <?= htmlspecialchars(date('M j, g:ia', strtotime($row['last_active']))) ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php elseif (!$showIpList && $urls): ?>
+            <div class="bg-slate-800/70 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 shadow-xl overflow-x-auto hover:shadow-2xl transition-all duration-300 animate-fade-in-up delay-300">
+                <div class="flex items-center gap-3 mb-4">
+                    <a href="/" class="text-indigo-400 hover:text-indigo-300 text-sm">&larr; Back</a>
+                    <h2 class="text-slate-200 text-lg font-semibold">My URLs</h2>
+                </div>
                 <table class="w-full text-left text-sm">
                     <thead>
                         <tr class="text-slate-400 border-b border-slate-700">
