@@ -6,7 +6,7 @@ class Shorten
 {
     private \PDO $db;
     private RateLimiter $rateLimiter;
-    private const MAX_URLS_PER_IP = 50; // Total limit per IP
+    private const MAX_URLS_PER_IP = 10; // Total limit per IP
 
     public function __construct(\PDO $db)
     {
@@ -80,7 +80,7 @@ class Shorten
         // Check total URLs per IP (hard limit)
         if ($ip !== '' && $this->countByIp($ip) >= self::MAX_URLS_PER_IP) {
             throw new \RuntimeException(
-                'You have reached the maximum lifetime limit of ' . self::MAX_URLS_PER_IP . ' shortened URLs.'
+                'You have reached the maximum limit of ' . self::MAX_URLS_PER_IP . ' URLs for this IP address'
             );
         }
 
@@ -122,7 +122,7 @@ class Shorten
              GROUP BY ip_address
              ORDER BY url_count DESC, last_active DESC'
         );
-        $ips = $stmt->fetchAll();
+        $ips = $stmt->fetchAll(\PDO::FETCH_ASSOC);
         
         // Anonymize IP addresses
         foreach ($ips as &$row) {
