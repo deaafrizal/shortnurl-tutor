@@ -2,6 +2,8 @@
 
 [![Deploy ShortnURL](https://github.com/deaafrizal/shortnurl-tutor/actions/workflows/deploy.yml/badge.svg)](https://github.com/deaafrizal/shortnurl-tutor/actions/workflows/deploy.yml)
 
+> **⚠️ Disclaimer:** Seluruh kode dalam repositori ini dibuat secara otomatis oleh **AI coding agent** (OpenCode) yang dioperasikan oleh **Dea Afrizal**. Proyek ini adalah hasil kolaborasi antara manusia dan AI untuk tujuan pembelajaran keamanan aplikasi web.
+
 Aplikasi pemendek URL berbasis PHP dengan fokus keamanan tinggi, siap produksi.
 
 ---
