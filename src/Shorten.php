@@ -112,7 +112,7 @@ class Shorten
     }
 
     /**
-     * Get all IPs with anonymized IP addresses
+     * Get all IPs
      */
     public function getAllIps(): array
     {
@@ -122,16 +122,7 @@ class Shorten
              GROUP BY ip_address
              ORDER BY url_count DESC, last_active DESC'
         );
-        $ips = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-        
-        // Anonymize IP addresses only if IpAnonymizer is available
-        if (class_exists('App\IpAnonymizer')) {
-            foreach ($ips as &$row) {
-                $row['ip_address'] = IpAnonymizer::anonymize($row['ip_address']);
-            }
-        }
-        
-        return $ips;
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
     public function getAllUrls(?string $ip = null): array
