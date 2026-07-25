@@ -54,17 +54,24 @@ class ShortenTest extends TestCase
         $checkStmt->method('execute')->willReturn(true);
         $checkStmt->method('fetchColumn')->willReturn(false);
 
+        $countStmt = $this->createMockPdoStatement();
+        $countStmt->method('execute')->willReturn(true);
+        $countStmt->method('fetchColumn')->willReturn(0);
+
         $insertStmt = $this->createMockPdoStatement();
         $insertStmt->method('execute')->willReturn(true);
 
         $pdo = $this->createMockPdo();
-        $pdo->method('prepare')->willReturnCallback(function ($query) use ($checkStmt, $insertStmt) {
+        $pdo->method('prepare')->willReturnCallback(function ($query) use ($checkStmt, $countStmt, $insertStmt) {
+            if (str_contains($query, 'COUNT(*)')) {
+                return $countStmt;
+            }
             return str_starts_with($query, 'SELECT') ? $checkStmt : $insertStmt;
         });
         $pdo->method('lastInsertId')->willReturn('1');
 
         $shorten = new Shorten($pdo);
-        $result = $shorten->createShortUrl('https://example.com');
+        $result = $shorten->createShortUrl('https://example.com', '127.0.0.1');
 
         $this->assertIsArray($result);
         $this->assertArrayHasKey('short_code', $result);
@@ -130,30 +137,29 @@ class ShortenTest extends TestCase
         $this->assertNull($result);
     }
 
-    public function testGetAllUrlsReturnsArray(): void
+    public function testCreateShortUrlExceedsIpLimitThrowsException(): void
     {
-        $expected = [
-            [
-                'id' => '1',
-                'original_url' => 'https://example.com',
-                'short_code' => 'abc123',
-                'click_count' => '5',
-                'created_at' => '2026-07-23 12:00:00',
-            ],
-        ];
+        $checkStmt = $this->createMockPdoStatement();
+        $checkStmt->method('execute')->willReturn(true);
+        $checkStmt->method('fetchColumn')->willReturn(false);
 
-        $stmt = $this->createMockPdoStatement();
-        $stmt->method('fetchAll')->willReturn($expected);
+        $countStmt = $this->createMockPdoStatement();
+        $countStmt->method('execute')->willReturn(true);
+        $countStmt->method('fetchColumn')->willReturn(10);
 
         $pdo = $this->createMockPdo();
-        $pdo->method('query')->willReturn($stmt);
+        $pdo->method('prepare')->willReturnCallback(function ($query) use ($checkStmt, $countStmt) {
+            if (str_contains($query, 'COUNT(*)')) {
+                return $countStmt;
+            }
+            return $checkStmt;
+        });
 
         $shorten = new Shorten($pdo);
-        $result = $shorten->getAllUrls();
 
-        $this->assertIsArray($result);
-        $this->assertCount(1, $result);
-        $this->assertEquals('abc123', $result[0]['short_code']);
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('maximum limit of 10');
+        $shorten->createShortUrl('https://example.com', '127.0.0.1');
     }
 
     public function testIncrementClickExecutesUpdate(): void

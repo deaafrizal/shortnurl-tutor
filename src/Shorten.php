@@ -11,6 +11,11 @@ class Shorten
         $this->db = $db;
     }
 
+    public static function getClientIp(): string
+    {
+        return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    }
+
     public function generateUniqueCode(int $length = 6): string
     {
         $chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -33,7 +38,14 @@ class Shorten
         return (bool) $stmt->fetchColumn();
     }
 
-    public function createShortUrl(string $originalUrl): array
+    public function countByIp(string $ip): int
+    {
+        $stmt = $this->db->prepare('SELECT COUNT(*) FROM urls WHERE ip_address = ?');
+        $stmt->execute([$ip]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    public function createShortUrl(string $originalUrl, string $ip = ''): array
     {
         $originalUrl = trim($originalUrl);
 
@@ -46,12 +58,16 @@ class Shorten
             throw new \InvalidArgumentException('URL must start with http:// or https://.');
         }
 
+        if ($ip !== '' && $this->countByIp($ip) >= 10) {
+            throw new \RuntimeException('You have reached the maximum limit of 10 shortened URLs.');
+        }
+
         $shortCode = $this->generateUniqueCode();
 
         $stmt = $this->db->prepare(
-            'INSERT INTO urls (original_url, short_code) VALUES (?, ?)'
+            'INSERT INTO urls (original_url, short_code, ip_address) VALUES (?, ?, ?)'
         );
-        $stmt->execute([$originalUrl, $shortCode]);
+        $stmt->execute([$originalUrl, $shortCode, $ip]);
 
         return [
             'id'           => (int) $this->db->lastInsertId(),
@@ -77,13 +93,5 @@ class Shorten
     {
         $stmt = $this->db->prepare('UPDATE urls SET click_count = click_count + 1 WHERE id = ?');
         $stmt->execute([$id]);
-    }
-
-    public function getAllUrls(): array
-    {
-        $stmt = $this->db->query(
-            'SELECT id, original_url, short_code, click_count, created_at FROM urls ORDER BY created_at DESC'
-        );
-        return $stmt->fetchAll();
     }
 }
