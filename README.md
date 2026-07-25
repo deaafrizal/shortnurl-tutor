@@ -1,49 +1,52 @@
-# DEASHORTN - URL Shortener
+# DEASHORTN — Pemendek URL
 
 [![Deploy ShortnURL](https://github.com/deaafrizal/shortnurl-tutor/actions/workflows/deploy.yml/badge.svg)](https://github.com/deaafrizal/shortnurl-tutor/actions/workflows/deploy.yml)
 
-A production-ready PHP URL shortener with a strong security focus.
+Aplikasi pemendek URL berbasis PHP dengan fokus keamanan tinggi, siap produksi.
 
-## Features
+---
 
-✅ Create short URLs from long URLs
-✅ Track click counts
-✅ View all shortened URLs
-✅ Delete your shortened URLs
-✅ CSRF protection (with token rotation per request)
-✅ XSS protection (all output escaped)
-✅ SQL injection protection (prepared statements, native PDO)
-✅ Rate limiting (30 URLs per hour per IP)
-✅ IP anonymization for privacy
-✅ IP spoofing protection (Cloudflare validation only)
-✅ Secure session cookies (HttpOnly + Secure + SameSite=Strict)
-✅ Content Security Policy (CSP) headers
-✅ Security headers (X-Frame-Options, X-Content-Type-Options, HSTS)
-✅ Automated CI/CD via GitHub Actions
-✅ Database credential validation
+## Fitur
 
-## Requirements
+| Kategori | Fitur |
+|---|---|
+| 🎯 **Fungsional** | Buat URL pendek, lacak klik, lihat & hapus URL |
+| 🔒 **CSRF** | Token dengan rotasi setiap request |
+| 🛡️ **XSS** | Semua output di-escape dengan `htmlspecialchars()` |
+| 🗄️ **SQL Injection** | Prepared statement + `EMULATE_PREPARES=false` |
+| ⏱️ **Rate Limiting** | 30 URL/jam/IP + 50 total/IP + 5 req/detik via nginx |
+| 👤 **Privasi** | IP dianonimkan (IPv4: `192.168.1.xxx`, IPv6: 64-bit terakhir) |
+| 🌐 **Anti Spoofing** | Hanya percaya `CF-Connecting-IP` jika dari Cloudflare |
+| 🍪 **Session Aman** | HttpOnly + Secure + SameSite=Strict |
+| 📋 **CSP** | `script-src` terbatas, `form-action 'self'`, anti-clickjacking |
+| 🚀 **CI/CD** | GitHub Actions → test → deploy otomatis ke VPS |
+
+---
+
+## Persyaratan
 
 - PHP 8.0+
-- MySQL/MariaDB 5.7+
-- Web server (Apache, Nginx, etc.)
+- MySQL / MariaDB 5.7+
+- Web server (Nginx / Apache)
 
-## Installation
+---
 
-### 1. Clone the repository
+## Instalasi
+
+### 1. Clone repositori
 
 ```bash
 git clone https://github.com/deaafrizal/shortnurl-tutor.git
 cd shortnurl-tutor
 ```
 
-### 2. Create `.env` file
+### 2. Buat file `.env`
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` with your database credentials:
+Isi kredensial database:
 
 ```dotenv
 DB_HOST=127.0.0.1
@@ -54,9 +57,9 @@ DB_PASSWORD=your_strong_password
 BASE_URL=http://localhost:8000
 ```
 
-**Important:** All database variables (`DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`) are **REQUIRED**. The application will fail to start if any are missing.
+> Semua variabel `DB_*` **WAJIB** diisi. Aplikasi akan gagal jika ada yang kosong.
 
-### 3. Create database and tables
+### 3. Buat database & tabel
 
 ```sql
 CREATE DATABASE shortnurl;
@@ -74,257 +77,285 @@ CREATE TABLE urls (
 );
 ```
 
-### 4. Set file permissions
+### 4. Atur izin file
 
 ```bash
 chmod 600 .env
 chmod 755 public/
 ```
 
-### 5. Run the application
+### 5. Jalankan aplikasi
 
-**Using PHP built-in server:**
+**Server built-in PHP:**
 
 ```bash
 cd public
 php -S localhost:8000
 ```
 
-Then visit: `http://localhost:8000`
+Buka `http://localhost:8000`.
 
-**Using Apache/Nginx:**
+**Nginx / Apache:**
 
-Point your web server's document root to the `public/` directory.
+Arahkan `document root` ke folder `public/`.
 
-## Security Features
+---
 
-### 1. Database Credential Validation
-- Application fails loudly if `.env` file is missing
-- All required database credentials must be explicitly set
-- No hardcoded fallback credentials
+## Keamanan
 
-### 2. CSRF Protection
-- All POST requests validated with CSRF tokens
-- Tokens generated securely using `random_bytes()` (64 chars hex)
-- Tokens validated with `hash_equals()` for timing-safe comparison
-- **Token rotation** after every successful POST (shorten/delete)
-- Prevents replay attacks if token is intercepted
+### 1. Validasi Kredensial Database
+- Gagal total jika `.env` tidak ditemukan
+- Semua kredensial database harus diisi eksplisit
+- Tidak ada *fallback* hardcoded
 
-### 3. XSS Protection
-- All user input escaped with `htmlspecialchars()`
-- Output properly escaped in templates
+### 2. Perlindungan CSRF
+- Semua request POST divalidasi dengan token CSRF
+- Token dibuat dengan `random_bytes()` (64 karakter hex)
+- Validasi pakai `hash_equals()` — timing-safe
+- **Token di-rotasi** setiap POST sukses — cegah *replay attack*
 
-### 4. SQL Injection Prevention
-- All database queries use prepared statements
-- PDO `EMULATE_PREPARES=false` — forces real native prepared statements
-- User input never directly interpolated into SQL
+### 3. Perlindungan XSS
+- Semua *output* data user melewati `htmlspecialchars()`
+- Tidak ada *output* user yang mentah ke HTML
+
+### 4. Anti SQL Injection
+- Semua query database pakai *prepared statement*
+- `PDO::ATTR_EMULATE_PREPARES = false` — paksakan *native prepared statement*
+- Input user **tidak pernah** digabung langsung ke SQL
 
 ### 5. Rate Limiting
-- Maximum 30 URLs per IP per hour (sliding window)
-- Maximum 50 total URLs per IP lifetime
-- Prevents abuse and resource exhaustion
 
-### 6. IP Anonymization
-- User IPs displayed in "Active Users" list are fully anonymized
-- IPv4: Last octet masked (e.g., 192.168.1.xxx)
-- IPv6: Last 64 bits masked (e.g., 2001:db8:xxxx:xxxx:xxxx:xxxx:xxxx:xxxx)
-- Raw IPs stored in database, only anonymized values shown publicly
-- Protects user privacy while maintaining statistics
+| Level | Batas | Konfigurasi |
+|---|---|---|
+| Aplikasi (hourly) | 30 URL/IP/jam | `src/RateLimiter.php` |
+| Aplikasi (lifetime) | 50 URL/IP | `src/Shorten.php` |
+| Nginx | 5 req/detik/IP | `nginx.conf` |
+| iptables (SSH) | 4 koneksi/30 detik/IP | `before.rules` |
 
-### 7. IP Spoofing Protection
-- **Only** trusts `CF-Connecting-IP` header if request originates from Cloudflare IP ranges
-- Cloudflare IP list (15 CIDR ranges) verified before trusting header
-- **Ignores** raw `X-Forwarded-For` headers from untrusted proxies
-- Falls back to `REMOTE_ADDR` (actual TCP connection IP)
-- Prevents IP-based authorization bypass attacks
+### 6. Anonimisasi IP
+- IP di halaman "Active Users" dianonimkan
+- IPv4: oktet terakhir diganti `xxx` (contoh: `192.168.1.xxx`)
+- IPv6: 64 bit terakhir diganti `xxxx` (contoh: `2001:db8:xxxx:xxxx`)
+- IP asli tetap tersimpan di DB, hanya tampilan publik yang dianonimkan
 
-### 8. Secure Session Configuration
-- **HttpOnly**: Cookies inaccessible to JavaScript
-- **Secure**: Cookies only sent over HTTPS
-- **SameSite=Strict**: Cookies not sent on cross-site requests
-- **Lifetime=0**: Session expires when browser closes
-- Prevents session hijacking and CSRF via cookie
+### 7. Anti IP Spoofing
+- Header `CF-Connecting-IP` hanya dipercaya jika request benar dari Cloudflare
+- 15 range IP Cloudflare dicek sebelum mempercayai header
+- Header `X-Forwarded-From` **diabaikan** dari proxy tidak dikenal
+- *Fallback* ke `REMOTE_ADDR` (IP koneksi TCP asli)
+- Mencegah *bypass* otorisasi berbasis IP
+
+### 8. Konfigurasi Session Aman
+| Parameter | Nilai | Fungsi |
+|---|---|---|
+| `httponly` | `true` | Cookie tidak bisa diakses JavaScript |
+| `secure` | `true` | Cookie hanya dikirim lewat HTTPS |
+| `samesite` | `Strict` | Cookie tidak dikirim dari situs lain |
+| `lifetime` | `0` | Session hangus saat browser ditutup |
 
 ### 9. Content Security Policy (CSP)
-- `default-src 'self'` — blocks all unauthorized resource loading
-- `script-src` limited to `self` + `cdn.tailwindcss.com`
-- `form-action 'self'` — forms can only submit to own origin
-- `frame-ancestors 'none'` — prevents clickjacking
-- Prevents XSS exploitation even if a vulnerability is found
+```
+default-src 'self'
+script-src 'self' https://cdn.tailwindcss.com
+style-src 'self' 'unsafe-inline'
+form-action 'self'
+frame-ancestors 'none'
+base-uri 'self'
+```
+- Blokir semua sumber daya dari domain tidak dikenal
+- Hanya script dari `cdn.tailwindcss.com` yang diizinkan
+- Form hanya bisa submit ke *origin* sendiri
+- Cegah clickjacking via `frame-ancestors 'none'`
 
-### 10. Additional HTTP Security Headers
-| Header | Value | Purpose |
+### 10. HTTP Security Headers
+
+| Header | Nilai | Kegunaan |
 |---|---|---|
 | `X-Frame-Options` | `SAMEORIGIN` | Anti-clickjacking |
-| `X-Content-Type-Options` | `nosniff` | Prevent MIME sniffing |
-| `X-XSS-Protection` | `1; mode=block` | Legacy XSS filter |
-| `Referrer-Policy` | `strict-origin-when-cross-origin` | Referrer leakage control |
+| `X-Content-Type-Options` | `nosniff` | Cegah MIME sniffing |
+| `X-XSS-Protection` | `1; mode=block` | Filter XSS lawas |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | Kontrol kebocoran referrer |
+
+---
 
 ## CI/CD Pipeline
 
-Every push to `main` branch triggers an automated deployment via GitHub Actions:
+Setiap *push* ke branch `main` memicu *deploy* otomatis:
 
-```yaml
-1. Checkout code
-2. Setup PHP 8.3 with required extensions
-3. Validate composer.json
-4. Cache Composer dependencies
-5. Install dependencies
-6. PHP syntax check (all source files)
-7. Run PHPUnit tests (17+ test cases)
-8. Deploy to production VPS via SSH
+```
+ 1. Checkout kode
+ 2. Setup PHP 8.3 + ekstensi
+ 3. Validasi composer.json
+ 4. Cache dependensi Composer
+ 5. Install dependensi
+ 6. Cek sintaks PHP semua file
+ 7. Jalankan PHPUnit (17+ test case)
+ 8. Deploy ke VPS via SSH
 ```
 
-**Secrets required in GitHub repository:**
+**Secrets yang dibutuhkan di GitHub:**
 
-| Secret | Description |
+| Secret | Deskripsi |
 |---|---|
-| `SSH_HOST` | VPS IP address |
-| `SSH_USER` | SSH user (root) |
-| `SSH_PRIVATE_KEY` | Ed25519 deploy key |
-| `DEPLOY_PATH` | Absolute path to project on VPS |
+| `SSH_HOST` | IP VPS |
+| `SSH_USER` | User SSH (root) |
+| `SSH_PRIVATE_KEY` | *Private key* Ed25519 deploy |
+| `DEPLOY_PATH` | Path absolut project di VPS |
 
-## File Structure
+---
+
+## Struktur File
 
 ```
-shorturl-tutor/
-├── .github/
-│   └── workflows/
-│       └── deploy.yml         # CI/CD deployment workflow
+shortnurl-tutor/
+├── .github/workflows/
+│   └── deploy.yml              # Workflow CI/CD GitHub Actions
 ├── config/
-│   └── database.php           # Database configuration and connection
+│   └── database.php            # Koneksi & konfigurasi database
 ├── public/
-│   └── index.php              # Main application entry point (front controller)
+│   └── index.php               # Entry point utama (front controller)
 ├── src/
-│   ├── Csrf.php               # CSRF token handling + session config
-│   ├── IpAnonymizer.php       # IP anonymization utilities
-│   ├── NotFoundException.php  # Custom 404 exception
-│   ├── RateLimiter.php        # Rate limiting logic
-│   ├── Redirect.php           # URL redirect logic
-│   └── Shorten.php            # URL shortening + IP validation
+│   ├── Csrf.php                # Token CSRF + konfigurasi session
+│   ├── IpAnonymizer.php        # Anonimisasi alamat IP
+│   ├── NotFoundException.php   # Exception 404 custom
+│   ├── RateLimiter.php         # Logika rate limiting
+│   ├── Redirect.php            # Logika redirect URL
+│   └── Shorten.php             # Pemendek URL + validasi IP
 ├── tests/
-│   ├── ShortenTest.php        # Unit tests for Shorten
-│   └── RedirectTest.php       # Unit tests for Redirect
-├── .env.example               # Environment variables template
-├── .gitignore                 # Git ignore rules
-├── composer.json              # PHP dependencies
-└── README.md                  # This file
+│   ├── ShortenTest.php         # Unit test Shorten
+│   └── RedirectTest.php        # Unit test Redirect
+├── .env.example                # Template environment variables
+├── .gitignore
+├── composer.json
+└── README.md
 ```
 
-## Usage
+---
 
-### Creating a Short URL
+## Penggunaan
 
-1. Visit the application homepage
-2. Enter a long URL in the input field
-3. Click "Shorten"
-4. Copy the generated short URL
+### Membuat URL Pendek
 
-### Viewing Your URLs
+1. Buka halaman utama aplikasi
+2. Masukkan URL panjang di kolom input
+3. Klik **Shorten**
+4. Salin URL pendek yang dihasilkan
 
-1. Click "My URLs" in the navigation
-2. All URLs created from your IP are displayed
-3. See click counts and creation timestamps
+### Melihat URL Anda
 
-### Deleting a Short URL
+1. Klik **My URLs** di navigasi atas
+2. Semua URL yang dibuat dari IP Anda akan tampil
+3. Lihat jumlah klik & waktu pembuatan
 
-1. Go to "My URLs"
-2. Find the URL you want to delete
-3. Click the "Delete" button
-4. Confirm the deletion
+### Menghapus URL
 
-## Rate Limits
+1. Buka **My URLs**
+2. Cari URL yang ingin dihapus
+3. Klik **Delete**
+4. Konfirmasi penghapusan
 
-- **Hourly Limit:** 30 URLs per IP address per hour (configurable in `src/RateLimiter.php`)
-- **Lifetime Limit:** 50 total URLs per IP address (configurable in `src/Shorten.php`)
-- **Nginx Rate Limit:** 5 requests/second per IP across all endpoints
-- **SSH Rate Limit:** 4 connections per 30 seconds per IP (via iptables)
-- **Error Message:** Provides remaining quota information
+---
 
 ## Environment Variables
 
 ```dotenv
-# Application
-APP_NAME              Application name (default: DEASHORTN)
-APP_ENV               Environment mode (default: production)
-APP_DEBUG             Debug mode (default: false)
+# Aplikasi
+APP_NAME              Nama aplikasi (default: DEASHORTN)
+APP_ENV               Mode environment (default: production)
+APP_DEBUG             Mode debug (default: false)
 
-# Database (ALL REQUIRED)
-DB_HOST               Database host (no default)
-DB_PORT               Database port (no default)
-DB_DATABASE           Database name (no default)
-DB_USERNAME           Database user (no default)
-DB_PASSWORD           Database password (no default)
+# Database — SEMUA WAJIB DIISI
+DB_HOST               Host database
+DB_PORT               Port database
+DB_DATABASE           Nama database
+DB_USERNAME           User database
+DB_PASSWORD           Password database
 
-# Application
-BASE_URL              Base URL for short links (default: http://localhost)
+# Aplikasi
+BASE_URL              Base URL untuk tautan pendek (default: http://localhost)
 ```
 
-## Learning Goals
+---
 
-This project demonstrates:
+## Batasan (Rate Limits)
 
-1. ✅ Secure credential management with environment variables
-2. ✅ CSRF protection with token rotation
-3. ✅ XSS prevention through output escaping
-4. ✅ SQL injection prevention with prepared statements
-5. ✅ Rate limiting (hourly + lifetime + nginx + iptables)
-6. ✅ User privacy protection (IP anonymization)
-7. ✅ IP spoofing prevention (Cloudflare IP validation)
-8. ✅ Secure session configuration (HttpOnly + Secure + SameSite)
-9. ✅ Content Security Policy (CSP) headers
-10. ✅ Automated CI/CD deployment via GitHub Actions
-11. ✅ Server-level SSH hardening (fail2ban, key-only auth)
-12. ✅ Proper error handling
+| Batasan | Nilai | File Konfigurasi |
+|---|---|---|
+| Per jam | 30 URL/IP | `src/RateLimiter.php:9` |
+| Seumur hidup | 50 URL/IP | `src/Shorten.php:9` |
+| Nginx | 5 request/detik/IP | `nginx.conf` |
+| SSH | 4 koneksi/30 detik/IP | `before.rules` |
 
-## Common Issues
+Pesan error akan menampilkan sisa kuota yang tersedia.
 
-### "FATAL ERROR: .env file not found"
-- **Solution:** Run `cp .env.example .env` and configure your database credentials
+---
 
-### "Missing required database environment variables"
-- **Solution:** Ensure all `DB_*` variables are set in `.env` file
+## Yang Dipelajari dari Project Ini
 
-### "Database connection failed"
-- **Solution:** Check your database credentials and ensure MySQL is running
+| # | Materi | Status |
+|---|---|---|
+| 1 | Manajemen kredensial via `.env` | ✅ |
+| 2 | Proteksi CSRF dengan rotasi token | ✅ |
+| 3 | Pencegahan XSS via *output escaping* | ✅ |
+| 4 | Pencegahan SQL Injection via *prepared statement* | ✅ |
+| 5 | Rate limiting (aplikasi + nginx + iptables) | ✅ |
+| 6 | Anonimisasi IP untuk privasi pengguna | ✅ |
+| 7 | Anti IP spoofing dengan validasi Cloudflare | ✅ |
+| 8 | Konfigurasi session aman (HttpOnly + Secure + SameSite) | ✅ |
+| 9 | Content Security Policy (CSP) headers | ✅ |
+| 10 | CI/CD otomatis via GitHub Actions | ✅ |
+| 11 | Hardening SSH server (fail2ban, key-only auth) | ✅ |
+| 12 | *Error handling* yang baik | ✅ |
 
-### "Rate limit exceeded"
-- **Solution:** You've created too many URLs in the last hour. Try again later.
+---
 
-## Additional Recommendations
+## Masalah Umum
 
-Items already implemented in this project are marked ✅.
+| Masalah | Solusi |
+|---|---|
+| `FATAL ERROR: .env file not found` | Jalankan `cp .env.example .env` dan isi kredensial |
+| `Missing required database environment variables` | Pastikan semua `DB_*` terisi di `.env` |
+| `Database connection failed` | Cek kredensial database & pastikan MySQL berjalan |
+| `Rate limit exceeded` | Terlalu banyak membuat URL dalam 1 jam. Coba lagi nanti |
+
+---
+
+## Rekomendasi Tambahan
+
+✅ = sudah diimplementasikan, ☐ = masih perlu ditambahkan.
 
 ```
-✅ HTTPS/SSL enforcement (nginx redirect)
-✅ Security headers (CSP, X-Frame-Options, HSTS, etc.)
-✅ CSRF protection with token rotation
+✅ HTTPS/SSL enforcement (redirect nginx)
+✅ Security headers (CSP, X-Frame-Options, dll)
+✅ CSRF protection dengan token rotation
 ✅ Session hardening (HttpOnly, Secure, SameSite)
-✅ Rate limiting (application + nginx + iptables)
+✅ Rate limiting (aplikasi + nginx + iptables)
 ✅ Fail2ban integration
-✅ IP anonymization (privacy)
+✅ IP anonymization (privasi)
 ☐ User authentication (login/register)
-☐ User-based URL quotas instead of IP-based
-☐ Audit logging (file integrity monitoring)
-☐ Backup and disaster recovery
-☐ Database encryption at rest
+☐ Quota berbasis user (bukan IP)
+☐ Audit logging (monitoring file)
+☐ Backup dan disaster recovery
+☐ Enkripsi database at rest
 ☐ Web Application Firewall (WAF)
-☐ Subresource Integrity (SRI) for CDN scripts
+☐ Subresource Integrity (SRI) untuk CDN
 ☐ Penetration testing
 ```
 
-## License
+---
 
-MIT License - See LICENSE file for details
+## Lisensi
 
-## Contributing
+MIT License — lihat file `LICENSE` untuk detail.
 
-This is an educational project. Contributions and feedback are welcome!
+## Kontribusi
 
-## Support
+Project ini bersifat edukasi. Kontribusi dan masukan sangat diterima!
 
-For issues or questions, please open a GitHub issue.
+## Dukungan
 
-## Author
+Untuk issue atau pertanyaan, silakan buka GitHub issue.
 
-Created by [@deaafrizal](https://github.com/deaafrizal) as a learning resource.
+## Pembuat
+
+Dibuat oleh [@deaafrizal](https://github.com/deaafrizal) sebagai sumber belajar.
