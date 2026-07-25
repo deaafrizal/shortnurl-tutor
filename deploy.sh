@@ -2,7 +2,10 @@
 # Deploy script for ShortnURL - dijalankan oleh GitHub Actions via SSH
 set -e
 
-cd /root/projects/shortnurl
+PROJECT_DIR="/root/projects/shortnurl"
+WEB_ROOT="/var/www/shortnurl"
+
+cd "$PROJECT_DIR"
 
 echo "Pulling latest changes..."
 git pull origin main
@@ -10,6 +13,18 @@ git pull origin main
 echo "Installing production dependencies..."
 export COMPOSER_ALLOW_SUPERUSER=1
 composer install --no-dev --no-interaction --prefer-dist
+
+echo "Syncing to web root..."
+rsync -a --delete \
+  --exclude='.env' \
+  --exclude='vendor/' \
+  --exclude='.git/' \
+  --exclude='tests/' \
+  --exclude='.github/' \
+  --exclude='.gitignore' \
+  --exclude='AGENTS.md' \
+  "$PROJECT_DIR/" "$WEB_ROOT/"
+chown -R www-data:www-data "$WEB_ROOT/src" "$WEB_ROOT/config" "$WEB_ROOT/public"
 
 echo "Validating PHP syntax..."
 php -l public/index.php

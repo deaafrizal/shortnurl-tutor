@@ -52,12 +52,4 @@ jobs:
           echo "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
-          ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" "
-            set -e
-            cd ${DEPLOY_PATH}
-            git pull origin main
-            export COMPOSER_ALLOW_SUPERUSER=1
-            composer install --no-dev --no-interaction --prefer-dist 2>&1
-            php -l public/index.php index.php config/database.php src/Shorten.php src/Redirect.php src/NotFoundException.php
-            systemctl reload php8.3-fpm || true
-          "
+          ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" "bash ${DEPLOY_PATH}/deploy.sh"
