@@ -205,7 +205,21 @@ class ShortenTest extends TestCase
         ];
 
         $stmt = $this->createMockPdoStatement();
-        $stmt->method('fetchAll')->willReturn($expected);
+        $stmt->method('fetchAll')->willReturnCallback(function ($fetchMode = \PDO::FETCH_BOTH) {
+            // Return the expected data regardless of fetch mode
+            return [
+                [
+                    'ip_address' => '192.168.1.1',
+                    'url_count' => '5',
+                    'last_active' => '2026-07-25 12:00:00',
+                ],
+                [
+                    'ip_address' => '10.0.0.1',
+                    'url_count' => '2',
+                    'last_active' => '2026-07-24 18:00:00',
+                ],
+            ];
+        });
 
         $pdo = $this->createMockPdo();
         $pdo->method('query')->willReturn($stmt);
