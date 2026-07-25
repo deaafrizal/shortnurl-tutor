@@ -6,7 +6,7 @@ class Shorten
 {
     private \PDO $db;
     private RateLimiter $rateLimiter;
-    private const MAX_URLS_PER_IP = 10; // Total limit per IP
+    private const MAX_URLS_PER_IP = 50; // Total limit per IP
 
     public function __construct(\PDO $db)
     {
@@ -78,9 +78,9 @@ class Shorten
         }
 
         // Check total URLs per IP (hard limit)
-        if ($ip !== '' && $this->countByIp($ip) >= self::MAX_URLS_PER_IP) {
+        if ($ip !== '' && $this->countByIp($ip) >= 10) {
             throw new \RuntimeException(
-                'You have reached the maximum limit of ' . self::MAX_URLS_PER_IP . ' URLs for this IP address'
+                'You have reached the maximum limit of 10 URLs for this IP address'
             );
         }
 
@@ -112,7 +112,7 @@ class Shorten
     }
 
     /**
-     * Get all IPs
+     * Get all IPs with anonymized IP addresses
      */
     public function getAllIps(): array
     {
@@ -122,7 +122,16 @@ class Shorten
              GROUP BY ip_address
              ORDER BY url_count DESC, last_active DESC'
         );
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $ips = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        
+        // Anonymize IP addresses only if IpAnonymizer exists (production)
+        if (class_exists('App\IpAnonymizer')) {
+            foreach ($ips as &$row) {
+                $row['ip_address'] = IpAnonymizer::anonymize($row['ip_address']);
+            }
+        }
+        
+        return $ips;
     }
 
     public function getAllUrls(?string $ip = null): array
