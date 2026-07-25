@@ -25,7 +25,7 @@ class RateLimiter
         $stmt->execute([$ip, $cutoffTime]);
         $result = $stmt->fetch();
         
-        return (int) $result['count'] >= self::RATE_LIMIT_MAX_REQUESTS;
+        return (int) ($result['count'] ?? 0) >= self::RATE_LIMIT_MAX_REQUESTS;
     }
 
     /**
@@ -40,7 +40,7 @@ class RateLimiter
         $stmt->execute([$ip, $cutoffTime]);
         $result = $stmt->fetch();
         
-        $remaining = self::RATE_LIMIT_MAX_REQUESTS - (int) $result['count'];
+        $remaining = self::RATE_LIMIT_MAX_REQUESTS - (int) ($result['count'] ?? 0);
         return max(0, $remaining);
     }
 }

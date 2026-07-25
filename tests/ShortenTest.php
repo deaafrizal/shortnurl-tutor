@@ -229,7 +229,7 @@ class ShortenTest extends TestCase
 
         $this->assertIsArray($result);
         $this->assertCount(2, $result);
-        $this->assertEquals('192.168.1.1', $result[0]['ip_address']);
+        $this->assertEquals('192.168.1.xxx', $result[0]['ip_address']);
         $this->assertEquals(5, (int) $result[0]['url_count']);
     }
 
