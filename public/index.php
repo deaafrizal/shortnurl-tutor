@@ -4,10 +4,14 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../src/Shorten.php';
 require_once __DIR__ . '/../src/Redirect.php';
 require_once __DIR__ . '/../src/NotFoundException.php';
+require_once __DIR__ . '/../src/Csrf.php';
 
 use App\Shorten;
 use App\Redirect;
 use App\NotFoundException;
+use App\Csrf;
+
+Csrf::startSession();
 
 $db = getDbConnection();
 $shorten = new Shorten($db);
@@ -31,6 +35,9 @@ $error = null;
 $newUrl = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!Csrf::validate($_POST['_csrf_token'] ?? '')) {
+        $error = 'Invalid form token. Please try again.';
+    } else {
     $originalUrl = $_POST['url'] ?? '';
 
     try {
@@ -42,6 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = $e->getMessage();
     } catch (\Exception $e) {
         $error = 'An error occurred. Please try again.';
+    }
     }
 }
 
@@ -114,6 +122,7 @@ $baseUrl = rtrim(getenv('BASE_URL') ?: 'http://localhost', '/');
 
         <div class="bg-slate-800/70 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 mb-8 shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-300 animate-fade-in-up delay-100">
             <form method="POST" action="" class="flex flex-col sm:flex-row gap-3">
+                <input type="hidden" name="_csrf_token" value="<?= Csrf::getToken() ?>">
                 <input
                     type="url"
                     name="url"
