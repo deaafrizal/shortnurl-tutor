@@ -106,7 +106,7 @@ class Shorten
             'SELECT id, original_url, short_code, click_count, created_at FROM urls WHERE short_code = ? LIMIT 1'
         );
         $stmt->execute([$code]);
-        $row = $stmt->fetch();
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
 
         return $row ?: null;
     }
@@ -146,7 +146,7 @@ class Shorten
                 'SELECT id, original_url, short_code, click_count, created_at FROM urls ORDER BY created_at DESC'
             );
         }
-        return $stmt->fetchAll();
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
     public function deleteUrlByCode(string $code, string $ip): void
