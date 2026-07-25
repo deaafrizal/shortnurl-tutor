@@ -56,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $baseUrl = rtrim(getenv('BASE_URL') ?: 'http://localhost', '/');
+$urls = $shorten->getAllUrls(Shorten::getClientIp());
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -94,6 +95,7 @@ $baseUrl = rtrim(getenv('BASE_URL') ?: 'http://localhost', '/');
             </a>
             <div class="flex items-center gap-6 text-sm">
                 <a href="/" class="text-slate-300 hover:text-indigo-400 transition-colors duration-200">Home</a>
+                <a href="#urls" class="text-slate-300 hover:text-indigo-400 transition-colors duration-200">My URLs</a>
             </div>
         </div>
     </nav>
@@ -138,6 +140,62 @@ $baseUrl = rtrim(getenv('BASE_URL') ?: 'http://localhost', '/');
                 </button>
             </form>
         </div>
+
+        <?php if (count($urls) > 0): ?>
+            <div id="urls" class="bg-slate-800/70 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 shadow-xl overflow-x-auto hover:shadow-2xl transition-all duration-300 animate-fade-in-up delay-300">
+                <h2 class="text-slate-200 text-lg font-semibold mb-4">My URLs</h2>
+                <table class="w-full text-left text-sm">
+                    <thead>
+                        <tr class="text-slate-400 border-b border-slate-700">
+                            <th class="pb-3 pr-3">#</th>
+                            <th class="pb-3 pr-3 hidden md:table-cell">Original URL</th>
+                            <th class="pb-3 pr-3">Short URL</th>
+                            <th class="pb-3 pr-3 text-center">Clicks</th>
+                            <th class="pb-3 pr-3 hidden sm:table-cell">Created</th>
+                            <th class="pb-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php $i = 1; foreach ($urls as $url): ?>
+                            <?php
+                                $shortUrl = $baseUrl . '/?c=' . htmlspecialchars($url['short_code']);
+                                $displayUrl = mb_strlen($url['original_url']) > 60
+                                    ? mb_substr($url['original_url'], 0, 60) . '...'
+                                    : $url['original_url'];
+                            ?>
+                            <tr class="border-b border-slate-700/50 hover:bg-slate-700/30 transition">
+                                <td class="py-3 pr-3 text-slate-500"><?= $i++ ?></td>
+                                <td class="py-3 pr-3 hidden md:table-cell text-slate-300 max-w-[250px] truncate" title="<?= htmlspecialchars($url['original_url']) ?>">
+                                    <?= htmlspecialchars($displayUrl) ?>
+                                </td>
+                                <td class="py-3 pr-3">
+                                    <a href="<?= $shortUrl ?>" target="_blank"
+                                       class="text-indigo-400 hover:text-indigo-300 font-mono text-xs">
+                                        <?= htmlspecialchars($url['short_code']) ?>
+                                    </a>
+                                </td>
+                                <td class="py-3 pr-3 text-center">
+                                    <span class="bg-slate-700 text-slate-300 text-xs font-medium px-2 py-0.5 rounded-full">
+                                        <?= (int) $url['click_count'] ?>
+                                    </span>
+                                </td>
+                                <td class="py-3 pr-3 text-slate-400 text-xs hidden sm:table-cell">
+                                    <?= htmlspecialchars(date('M j, g:ia', strtotime($url['created_at']))) ?>
+                                </td>
+                                <td class="py-3 text-right">
+                                    <button onclick="copyToClipboard('<?= htmlspecialchars($shortUrl) ?>', this)"
+                                            class="bg-slate-700 hover:bg-slate-600 hover:scale-105 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5 copy-btn ml-auto"
+                                            data-copied="Copied!">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                        Copy
+                                    </button>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
 
         <?php if ($newUrl): ?>
             <div class="bg-slate-800/70 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 mb-8 shadow-xl animate-fade-in-up delay-200">

@@ -89,6 +89,21 @@ class Shorten
         return $row ?: null;
     }
 
+    public function getAllUrls(?string $ip = null): array
+    {
+        if ($ip !== null && $ip !== '') {
+            $stmt = $this->db->prepare(
+                'SELECT id, original_url, short_code, click_count, created_at FROM urls WHERE ip_address = ? ORDER BY created_at DESC'
+            );
+            $stmt->execute([$ip]);
+        } else {
+            $stmt = $this->db->query(
+                'SELECT id, original_url, short_code, click_count, created_at FROM urls ORDER BY created_at DESC'
+            );
+        }
+        return $stmt->fetchAll();
+    }
+
     public function incrementClick(int $id): void
     {
         $stmt = $this->db->prepare('UPDATE urls SET click_count = click_count + 1 WHERE id = ?');

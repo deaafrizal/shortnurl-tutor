@@ -162,6 +162,33 @@ class ShortenTest extends TestCase
         $shorten->createShortUrl('https://example.com', '127.0.0.1');
     }
 
+    public function testGetAllUrlsByIpReturnsFilteredResults(): void
+    {
+        $expected = [
+            [
+                'id' => '1',
+                'original_url' => 'https://example.com',
+                'short_code' => 'abc123',
+                'click_count' => '3',
+                'created_at' => '2026-07-23 12:00:00',
+            ],
+        ];
+
+        $stmt = $this->createMockPdoStatement();
+        $stmt->method('execute')->willReturn(true);
+        $stmt->method('fetchAll')->willReturn($expected);
+
+        $pdo = $this->createMockPdo();
+        $pdo->method('prepare')->willReturn($stmt);
+
+        $shorten = new Shorten($pdo);
+        $result = $shorten->getAllUrls('127.0.0.1');
+
+        $this->assertIsArray($result);
+        $this->assertCount(1, $result);
+        $this->assertEquals('abc123', $result[0]['short_code']);
+    }
+
     public function testIncrementClickExecutesUpdate(): void
     {
         $stmt = $this->createMockPdoStatement();
