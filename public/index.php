@@ -5,6 +5,8 @@ require_once __DIR__ . '/../src/Shorten.php';
 require_once __DIR__ . '/../src/Redirect.php';
 require_once __DIR__ . '/../src/NotFoundException.php';
 require_once __DIR__ . '/../src/Csrf.php';
+require_once __DIR__ . '/../src/RateLimiter.php';
+require_once __DIR__ . '/../src/IpAnonymizer.php';
 
 use App\Shorten;
 use App\Redirect;
@@ -49,19 +51,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = $e->getMessage();
         }
     } else {
-    $originalUrl = $_POST['url'] ?? '';
+        $originalUrl = $_POST['url'] ?? '';
 
-    try {
-        $created = $shorten->createShortUrl($originalUrl, $myIp);
-        $newUrl = $baseUrl . '/?c=' . $created['short_code'];
-        $success = 'URL shortened successfully!';
-    } catch (\InvalidArgumentException $e) {
-        $error = $e->getMessage();
-    } catch (\RuntimeException $e) {
-        $error = $e->getMessage();
-    } catch (\Exception $e) {
-        $error = 'An error occurred. Please try again.';
-    }
+        try {
+            $created = $shorten->createShortUrl($originalUrl, $myIp);
+            $newUrl = $baseUrl . '/?c=' . $created['short_code'];
+            $success = 'URL shortened successfully!';
+        } catch (\InvalidArgumentException $e) {
+            $error = $e->getMessage();
+        } catch (\RuntimeException $e) {
+            $error = $e->getMessage();
+        } catch (\Exception $e) {
+            $error = 'An error occurred. Please try again.';
+        }
     }
 }
 
@@ -78,7 +80,7 @@ if ($showIpList) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DEASHORTN</title>
+    <title>DEASHORTN - URL Shortener Tutorial</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @keyframes fadeInUp {
@@ -116,6 +118,15 @@ if ($showIpList) {
     </nav>
 
     <div class="w-full max-w-3xl">
+        <!-- Disclaimer Banner -->
+        <div class="bg-amber-900/50 border border-amber-700 text-amber-300 px-5 py-3 rounded-lg mb-6 text-sm flex items-start gap-3 animate-fade-in">
+            <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <div>
+                <strong>Educational Purpose:</strong> This is a tutorial application for learning PHP security practices. 
+                Not recommended for production use without significant security enhancements.
+            </div>
+        </div>
+
         <div class="text-center mb-10 animate-fade-in-up">
             <h1 class="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">
                 DEASHORTN
@@ -125,19 +136,19 @@ if ($showIpList) {
 
         <?php if ($success): ?>
             <div class="bg-emerald-900/50 border border-emerald-700 text-emerald-300 px-5 py-3 rounded-lg mb-6 text-sm flex items-center gap-2 animate-fade-in">
-                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 <?= htmlspecialchars($success) ?>
             </div>
         <?php endif; ?>
 
         <?php if ($error): ?>
             <div class="bg-red-900/50 border border-red-700 text-red-300 px-5 py-3 rounded-lg mb-6 text-sm flex items-center gap-2 animate-fade-in">
-                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 <?= htmlspecialchars($error) ?>
             </div>
         <?php endif; ?>
 
-        <div class="bg-slate-800/70 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 mb-8 shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-300 animate-fade-in-up delay-100">
+        <div class="bg-slate-800/70 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 mb-8 shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-300 animate-fade-in-up">
             <form method="POST" action="" class="flex flex-col sm:flex-row gap-3">
                 <input type="hidden" name="_csrf_token" value="<?= Csrf::getToken() ?>">
                 <input
@@ -145,11 +156,11 @@ if ($showIpList) {
                     name="url"
                     placeholder="https://example.com/very-long-url..."
                     required
-                    class="flex-1 bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                    class="flex-1 bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 >
                 <button
                     type="submit"
-                    class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 hover:scale-105 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200 shadow-lg shadow-indigo-900/40 active:scale-95"
+                    class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 hover:scale-105 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200 flex items-center gap-2 whitespace-nowrap"
                 >
                     Shorten
                 </button>
@@ -158,12 +169,15 @@ if ($showIpList) {
 
         <?php if ($showIpList && $ips): ?>
             <div class="bg-slate-800/70 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 shadow-xl overflow-x-auto hover:shadow-2xl transition-all duration-300 animate-fade-in-up delay-300">
-                <h2 class="text-slate-200 text-lg font-semibold mb-4">Active Users</h2>
+                <div class="mb-4">
+                    <h2 class="text-slate-200 text-lg font-semibold mb-2">Active Users</h2>
+                    <p class="text-slate-400 text-xs">IP addresses are anonymized for privacy protection</p>
+                </div>
                 <table class="w-full text-left text-sm">
                     <thead>
                         <tr class="text-slate-400 border-b border-slate-700">
                             <th class="pb-3 pr-3">#</th>
-                            <th class="pb-3 pr-3">IP Address</th>
+                            <th class="pb-3 pr-3">Anonymized IP</th>
                             <th class="pb-3 pr-3 text-center">URLs</th>
                             <th class="pb-3 pr-3 hidden sm:table-cell">Last Active</th>
                         </tr>
@@ -172,11 +186,8 @@ if ($showIpList) {
                         <?php $i = 1; foreach ($ips as $row): ?>
                             <tr class="border-b border-slate-700/50 hover:bg-slate-700/30 transition">
                                 <td class="py-3 pr-3 text-slate-500"><?= $i++ ?></td>
-                                <td class="py-3 pr-3">
-                                    <a href="/?ip=<?= htmlspecialchars($row['ip_address']) ?>"
-                                       class="text-indigo-400 hover:text-indigo-300 font-mono text-xs">
-                                        <?= htmlspecialchars($row['ip_address']) ?>
-                                    </a>
+                                <td class="py-3 pr-3 text-slate-300 font-mono text-xs">
+                                    <?= htmlspecialchars($row['ip_address']) ?>
                                 </td>
                                 <td class="py-3 pr-3 text-center">
                                     <span class="bg-slate-700 text-slate-300 text-xs font-medium px-2 py-0.5 rounded-full">
@@ -205,7 +216,7 @@ if ($showIpList) {
                             <th class="pb-3 pr-3">Short URL</th>
                             <th class="pb-3 pr-3 text-center">Clicks</th>
                             <th class="pb-3 pr-3 hidden sm:table-cell">Created</th>
-                            <th class="pb-3"><?= $viewIp === $myIp ? 'Action' : '' ?></th>
+                            <th class="pb-3">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -237,22 +248,20 @@ if ($showIpList) {
                                 </td>
                                 <td class="py-3 text-right flex items-center gap-1">
                                     <button onclick="copyToClipboard('<?= htmlspecialchars($shortUrl) ?>', this)"
-                                            class="bg-slate-700 hover:bg-slate-600 hover:scale-105 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1.5 copy-btn"
+                                            class="bg-slate-700 hover:bg-slate-600 hover:scale-105 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1"
                                             data-copied="Copied!">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                                         Copy
                                     </button>
-                                    <?php if ($viewIp === $myIp): ?>
                                     <form method="POST" action="" class="inline" onsubmit="return confirm('Delete this short URL?')">
                                         <input type="hidden" name="_csrf_token" value="<?= Csrf::getToken() ?>">
                                         <input type="hidden" name="_action" value="delete">
                                         <input type="hidden" name="code" value="<?= htmlspecialchars($url['short_code']) ?>">
                                         <button type="submit" class="bg-red-800 hover:bg-red-700 hover:scale-105 text-red-300 px-2 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                             Delete
                                         </button>
                                     </form>
-                                    <?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -270,16 +279,14 @@ if ($showIpList) {
                         <?= htmlspecialchars($newUrl) ?>
                     </a>
                     <button onclick="copyToClipboard('<?= htmlspecialchars($newUrl) ?>', this)"
-                            class="shrink-0 bg-slate-700 hover:bg-slate-600 hover:scale-105 text-slate-200 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 copy-btn"
+                            class="shrink-0 bg-slate-700 hover:bg-slate-600 hover:scale-105 text-slate-200 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2"
                             data-copied="Copied!">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                         Copy
                     </button>
                 </div>
             </div>
         <?php endif; ?>
-
-
 
     </div>
 
@@ -302,7 +309,7 @@ if ($showIpList) {
 
     function showCopied(btn) {
         const original = btn.innerHTML;
-        btn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Copied!';
+        btn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copied!';
         btn.classList.remove('bg-slate-700', 'hover:bg-slate-600');
         btn.classList.add('bg-emerald-700', 'hover:bg-emerald-600');
         setTimeout(() => {

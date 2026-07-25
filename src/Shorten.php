@@ -5,14 +5,25 @@ namespace App;
 class Shorten
 {
     private \PDO $db;
+    private RateLimiter $rateLimiter;
+    private const MAX_URLS_PER_IP = 50; // Total limit per IP
 
     public function __construct(\PDO $db)
     {
         $this->db = $db;
+        $this->rateLimiter = new RateLimiter($db);
     }
 
     public static function getClientIp(): string
     {
+        // Check for IP behind proxy
+        if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+            return $_SERVER['HTTP_CF_CONNECTING_IP'];
+        }
+        if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+            return trim($ips[0]);
+        }
         return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
     }
 
@@ -58,14 +69,25 @@ class Shorten
             throw new \InvalidArgumentException('URL must start with http:// or https://.');
         }
 
-        if ($ip !== '' && $this->countByIp($ip) >= 10) {
-            throw new \RuntimeException('You have reached the maximum limit of 10 shortened URLs.');
+        // Check rate limiting (hourly limit)
+        if ($ip !== '' && $this->rateLimiter->isRateLimited($ip)) {
+            $remaining = $this->rateLimiter->getRemainingQuota($ip);
+            throw new \RuntimeException(
+                'Rate limit exceeded. You can create ' . $remaining . ' more URL(s) within the next hour.'
+            );
+        }
+
+        // Check total URLs per IP (hard limit)
+        if ($ip !== '' && $this->countByIp($ip) >= self::MAX_URLS_PER_IP) {
+            throw new \RuntimeException(
+                'You have reached the maximum lifetime limit of ' . self::MAX_URLS_PER_IP . ' shortened URLs.'
+            );
         }
 
         $shortCode = $this->generateUniqueCode();
 
         $stmt = $this->db->prepare(
-            'INSERT INTO urls (original_url, short_code, ip_address) VALUES (?, ?, ?)'
+            'INSERT INTO urls (original_url, short_code, ip_address, created_at) VALUES (?, ?, ?, NOW())'
         );
         $stmt->execute([$originalUrl, $shortCode, $ip]);
 
@@ -89,6 +111,9 @@ class Shorten
         return $row ?: null;
     }
 
+    /**
+     * Get all IPs with anonymized IP addresses
+     */
     public function getAllIps(): array
     {
         $stmt = $this->db->query(
@@ -97,7 +122,14 @@ class Shorten
              GROUP BY ip_address
              ORDER BY url_count DESC, last_active DESC'
         );
-        return $stmt->fetchAll();
+        $ips = $stmt->fetchAll();
+        
+        // Anonymize IP addresses
+        foreach ($ips as &$row) {
+            $row['ip_address'] = IpAnonymizer::anonymize($row['ip_address']);
+        }
+        
+        return $ips;
     }
 
     public function getAllUrls(?string $ip = null): array
