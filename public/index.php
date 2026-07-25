@@ -47,6 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $shorten->deleteUrlByCode($_POST['code'] ?? '', $myIp);
             $success = 'URL deleted successfully!';
+            Csrf::rotateToken();
         } catch (\RuntimeException $e) {
             $error = $e->getMessage();
         }
@@ -57,6 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $created = $shorten->createShortUrl($originalUrl, $myIp);
             $newUrl = $baseUrl . '/?c=' . $created['short_code'];
             $success = 'URL shortened successfully!';
+            Csrf::rotateToken();
         } catch (\InvalidArgumentException $e) {
             $error = $e->getMessage();
         } catch (\RuntimeException $e) {
