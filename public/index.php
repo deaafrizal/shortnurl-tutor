@@ -66,6 +66,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $activityPage = $showMine ? null : $shorten->getIpsPage(1, 10);
 $rows = $showMine ? $shorten->getAllUrls($myIp) : $activityPage['items'];
 $hasMoreActivity = !$showMine && $activityPage['has_more'];
+$assetVersion = (string) max(
+    filemtime(__DIR__ . '/assets/app.css'),
+    filemtime(__DIR__ . '/assets/app.js')
+);
 $escape = static fn ($value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 ?>
 <!doctype html>
@@ -76,7 +80,7 @@ $escape = static fn ($value): string => htmlspecialchars((string) $value, ENT_QU
     <meta name="description" content="Pemendek URL cepat, sederhana, dan berfokus pada privasi.">
     <meta name="theme-color" content="#09090b">
     <title>DeaShortn — Tautan ringkas, tanpa ribet</title>
-    <link rel="stylesheet" href="/assets/app.css">
+    <link rel="stylesheet" href="/assets/app.css?v=<?= $assetVersion ?>">
 </head>
 <body class="glow min-h-screen bg-zinc-950 text-zinc-100 antialiased selection:bg-indigo-500/30">
 <nav class="border-b border-white/5 bg-zinc-950/75 backdrop-blur-xl">
@@ -130,11 +134,11 @@ $escape = static fn ($value): string => htmlspecialchars((string) $value, ENT_QU
             <thead><tr class="border-b border-white/10 bg-white/[.025] text-xs uppercase tracking-wider text-zinc-500"><th class="px-5 py-4">Tujuan</th><th class="px-5 py-4">Tautan pendek</th><th class="px-5 py-4 text-center">Klik</th><th class="px-5 py-4 text-right">Aksi</th></tr></thead>
             <tbody><?php foreach ($rows as $row): $shortUrl=$baseUrl.'/?c='.$row['short_code']; $display=mb_strlen($row['original_url'])>42?mb_substr($row['original_url'],0,42).'…':$row['original_url']; ?><tr class="border-b border-white/5 last:border-0 hover:bg-white/[.03]"><td class="max-w-[160px] px-5 py-4 sm:max-w-xs"><div class="truncate" title="<?= $escape($row['original_url']) ?>"><?= $escape($display) ?></div><div class="mt-1 text-xs text-zinc-600"><?= $escape(date('d M Y',strtotime($row['created_at']))) ?></div></td><td class="px-5 py-4"><a href="<?= $escape($shortUrl) ?>" target="_blank" rel="noopener noreferrer" class="font-mono text-xs text-indigo-400"><?= $escape($row['short_code']) ?></a></td><td class="px-5 py-4 text-center"><?= (int)$row['click_count'] ?></td><td class="px-5 py-4"><div class="flex justify-end gap-2"><button type="button" data-copy="<?= $escape($shortUrl) ?>" class="copy-button rounded-lg bg-white/[.07] px-3 py-2 text-xs hover:bg-white/[.12]">Salin</button><form method="post" class="delete-form"><input type="hidden" name="_csrf_token" value="<?= $escape(Csrf::getToken()) ?>"><input type="hidden" name="_action" value="delete"><input type="hidden" name="code" value="<?= $escape($row['short_code']) ?>"><button class="rounded-lg px-3 py-2 text-xs text-red-400 hover:bg-red-400/10">Hapus</button></form></div></td></tr><?php endforeach; ?></tbody>
         <?php endif; ?>
-        </table></div><?php if (!$showMine): ?><div id="activity-loader" data-next-page="2" data-has-more="<?= $hasMoreActivity ? 'true' : 'false' ?>" class="hidden items-center justify-center gap-2 border-t border-white/5 px-5 py-4 text-xs text-zinc-500" aria-live="polite"><span class="h-3 w-3 animate-spin rounded-full border-2 border-indigo-400/30 border-t-indigo-400"></span>Memuat aktivitas…</div><div class="flex justify-center border-t border-white/5 px-5 py-4"><button id="activity-load-more" type="button" class="rounded-lg bg-white/[.07] px-4 py-2 text-xs font-medium text-zinc-300 transition hover:bg-white/[.12] disabled:cursor-not-allowed disabled:opacity-50" <?= $hasMoreActivity ? '' : 'hidden' ?>>Muat 10 aktivitas lagi</button></div><div id="activity-sentinel" class="h-1" aria-hidden="true"></div><?php endif; ?></div>
+        </table></div><?php if (!$showMine): ?><div id="activity-loader" data-next-page="2" data-has-more="<?= $hasMoreActivity ? 'true' : 'false' ?>" class="hidden items-center justify-center gap-2 border-t border-white/5 px-5 py-4 text-xs text-zinc-500" aria-live="polite"><span class="h-3 w-3 animate-spin rounded-full border-2 border-indigo-400/30 border-t-indigo-400"></span>Memuat aktivitas…</div><div id="activity-sentinel" class="h-1" aria-hidden="true"></div><?php endif; ?></div>
         <?php else: ?><div class="rounded-2xl border border-dashed border-white/10 bg-white/[.02] px-6 py-14 text-center"><div class="mx-auto grid h-11 w-11 place-items-center rounded-full bg-white/[.05] text-zinc-500">↗</div><p class="mt-4 font-medium text-zinc-300">Belum ada tautan</p><p class="mt-1 text-sm text-zinc-600">Tautan yang dibuat akan muncul di sini.</p></div><?php endif; ?>
     </section>
     <footer class="mt-12 text-center text-xs text-zinc-700">Proyek edukasi keamanan web · Gunakan secara bertanggung jawab</footer>
 </main>
-<script src="/assets/app.js" defer></script>
+<script src="/assets/app.js?v=<?= $assetVersion ?>" defer></script>
 </body>
 </html>
