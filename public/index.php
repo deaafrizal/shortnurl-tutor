@@ -28,6 +28,21 @@ $myIp = Shorten::getClientIp();
 $showMine = ($_GET['view'] ?? '') === 'mine';
 $success = $error = $newUrl = null;
 
+if (!$showMine && isset($_GET['activity_page'])) {
+    $page = filter_var($_GET['activity_page'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 10000]]);
+    if ($page === false) {
+        http_response_code(400);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['error' => 'Invalid activity page.']);
+        exit;
+    }
+
+    header('Cache-Control: private, max-age=30');
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($shorten->getIpsPage($page, 10), JSON_THROW_ON_ERROR);
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!Csrf::validate($_POST['_csrf_token'] ?? '')) {
         $error = 'Token formulir tidak valid. Silakan coba lagi.';
@@ -48,7 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$rows = $showMine ? $shorten->getAllUrls($myIp) : $shorten->getAllIps();
+$activityPage = $showMine ? null : $shorten->getIpsPage(1, 10);
+$rows = $showMine ? $shorten->getAllUrls($myIp) : $activityPage['items'];
+$hasMoreActivity = !$showMine && $activityPage['has_more'];
 $escape = static fn ($value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 ?>
 <!doctype html>
@@ -108,12 +125,12 @@ $escape = static fn ($value): string => htmlspecialchars((string) $value, ENT_QU
         <div class="overflow-hidden rounded-2xl border border-white/10 bg-white/[.035]"><div class="overflow-x-auto"><table class="w-full text-left text-sm">
         <?php if (!$showMine): ?>
             <thead><tr class="border-b border-white/10 bg-white/[.025] text-xs uppercase tracking-wider text-zinc-500"><th class="px-5 py-4">#</th><th class="px-5 py-4">Pengguna anonim</th><th class="px-5 py-4 text-center">Tautan</th><th class="hidden px-5 py-4 sm:table-cell">Terakhir aktif</th></tr></thead>
-            <tbody><?php $i=1; foreach ($rows as $row): ?><tr class="border-b border-white/5 last:border-0 hover:bg-white/[.03]"><td class="px-5 py-4 text-zinc-600"><?= $i++ ?></td><td class="px-5 py-4 font-mono text-xs"><?= $escape($row['ip_address']) ?></td><td class="px-5 py-4 text-center"><span class="rounded-full bg-white/[.07] px-2.5 py-1 text-xs"><?= (int)$row['url_count'] ?></span></td><td class="hidden px-5 py-4 text-xs text-zinc-500 sm:table-cell"><?= $escape(date('d M Y, H:i',strtotime($row['last_active']))) ?></td></tr><?php endforeach; ?></tbody>
+            <tbody id="activity-list"><?php $i=1; foreach ($rows as $row): ?><tr class="activity-row border-b border-white/5 last:border-0 hover:bg-white/[.03]"><td class="activity-number px-5 py-4 text-zinc-600"><?= $i++ ?></td><td class="px-5 py-4 font-mono text-xs"><?= $escape($row['ip_address']) ?></td><td class="px-5 py-4 text-center"><span class="rounded-full bg-white/[.07] px-2.5 py-1 text-xs"><?= (int)$row['url_count'] ?></span></td><td class="hidden px-5 py-4 text-xs text-zinc-500 sm:table-cell"><?= $escape(date('d M Y, H:i',strtotime($row['last_active']))) ?></td></tr><?php endforeach; ?></tbody>
         <?php else: ?>
             <thead><tr class="border-b border-white/10 bg-white/[.025] text-xs uppercase tracking-wider text-zinc-500"><th class="px-5 py-4">Tujuan</th><th class="px-5 py-4">Tautan pendek</th><th class="px-5 py-4 text-center">Klik</th><th class="px-5 py-4 text-right">Aksi</th></tr></thead>
             <tbody><?php foreach ($rows as $row): $shortUrl=$baseUrl.'/?c='.$row['short_code']; $display=mb_strlen($row['original_url'])>42?mb_substr($row['original_url'],0,42).'…':$row['original_url']; ?><tr class="border-b border-white/5 last:border-0 hover:bg-white/[.03]"><td class="max-w-[160px] px-5 py-4 sm:max-w-xs"><div class="truncate" title="<?= $escape($row['original_url']) ?>"><?= $escape($display) ?></div><div class="mt-1 text-xs text-zinc-600"><?= $escape(date('d M Y',strtotime($row['created_at']))) ?></div></td><td class="px-5 py-4"><a href="<?= $escape($shortUrl) ?>" target="_blank" rel="noopener noreferrer" class="font-mono text-xs text-indigo-400"><?= $escape($row['short_code']) ?></a></td><td class="px-5 py-4 text-center"><?= (int)$row['click_count'] ?></td><td class="px-5 py-4"><div class="flex justify-end gap-2"><button type="button" data-copy="<?= $escape($shortUrl) ?>" class="copy-button rounded-lg bg-white/[.07] px-3 py-2 text-xs hover:bg-white/[.12]">Salin</button><form method="post" class="delete-form"><input type="hidden" name="_csrf_token" value="<?= $escape(Csrf::getToken()) ?>"><input type="hidden" name="_action" value="delete"><input type="hidden" name="code" value="<?= $escape($row['short_code']) ?>"><button class="rounded-lg px-3 py-2 text-xs text-red-400 hover:bg-red-400/10">Hapus</button></form></div></td></tr><?php endforeach; ?></tbody>
         <?php endif; ?>
-        </table></div></div>
+        </table></div><?php if (!$showMine): ?><div id="activity-loader" data-next-page="2" data-has-more="<?= $hasMoreActivity ? 'true' : 'false' ?>" class="hidden items-center justify-center gap-2 border-t border-white/5 px-5 py-4 text-xs text-zinc-500" aria-live="polite"><span class="h-3 w-3 animate-spin rounded-full border-2 border-indigo-400/30 border-t-indigo-400"></span>Memuat aktivitas…</div><div id="activity-sentinel" class="h-1" aria-hidden="true"></div><?php endif; ?></div>
         <?php else: ?><div class="rounded-2xl border border-dashed border-white/10 bg-white/[.02] px-6 py-14 text-center"><div class="mx-auto grid h-11 w-11 place-items-center rounded-full bg-white/[.05] text-zinc-500">↗</div><p class="mt-4 font-medium text-zinc-300">Belum ada tautan</p><p class="mt-1 text-sm text-zinc-600">Tautan yang dibuat akan muncul di sini.</p></div><?php endif; ?>
     </section>
     <footer class="mt-12 text-center text-xs text-zinc-700">Proyek edukasi keamanan web · Gunakan secara bertanggung jawab</footer>

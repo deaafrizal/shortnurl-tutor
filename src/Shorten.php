@@ -143,10 +143,10 @@ class Shorten
     public function getAllIps(): array
     {
         $stmt = $this->db->query(
-            'SELECT ip_address, COUNT(*) as url_count, MAX(created_at) as last_active
+            'SELECT ip_address, COUNT(*) AS url_count, MAX(created_at) AS last_active
              FROM urls WHERE ip_address != \'\'
              GROUP BY ip_address
-             ORDER BY url_count DESC, last_active DESC'
+             ORDER BY url_count DESC, last_active DESC, ip_address ASC'
         );
         $ips = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
@@ -156,6 +156,40 @@ class Shorten
             }
         }
         return $ips;
+    }
+
+    /**
+     * Return one bounded page for the public activity list.
+     * Fetching one extra row lets callers know whether another request is needed.
+     */
+    public function getIpsPage(int $page = 1, int $perPage = 10): array
+    {
+        $page = max(1, $page);
+        $perPage = min(50, max(1, $perPage));
+        $offset = ($page - 1) * $perPage;
+        $stmt = $this->db->prepare(
+            'SELECT ip_address, COUNT(*) AS url_count, MAX(created_at) AS last_active
+             FROM urls WHERE ip_address != \'\'
+             GROUP BY ip_address
+             ORDER BY url_count DESC, last_active DESC, ip_address ASC
+             LIMIT :limit OFFSET :offset'
+        );
+        $stmt->bindValue(':limit', $perPage + 1, \PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+        $stmt->execute();
+        $ips = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $hasMore = count($ips) > $perPage;
+        if ($hasMore) {
+            array_pop($ips);
+        }
+
+        if (class_exists('App\IpAnonymizer')) {
+            foreach ($ips as &$row) {
+                $row['ip_address'] = IpAnonymizer::anonymize($row['ip_address']);
+            }
+        }
+
+        return ['items' => $ips, 'has_more' => $hasMore];
     }
 
     public function getAllUrls(?string $ip = null): array

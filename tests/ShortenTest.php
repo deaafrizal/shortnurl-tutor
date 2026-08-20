@@ -233,6 +233,25 @@ class ShortenTest extends TestCase
         $this->assertEquals(5, (int) $result[0]['url_count']);
     }
 
+    public function testGetIpsPageReturnsBoundedResultsAndHasMoreFlag(): void
+    {
+        $stmt = $this->createMockPdoStatement();
+        $stmt->method('fetchAll')->willReturn([
+            ['ip_address' => '192.168.1.1', 'url_count' => '5', 'last_active' => '2026-07-25 12:00:00'],
+            ['ip_address' => '10.0.0.1', 'url_count' => '2', 'last_active' => '2026-07-24 18:00:00'],
+            ['ip_address' => '172.16.0.1', 'url_count' => '1', 'last_active' => '2026-07-23 09:00:00'],
+        ]);
+
+        $pdo = $this->createMockPdo();
+        $pdo->method('prepare')->willReturn($stmt);
+
+        $result = (new Shorten($pdo))->getIpsPage(1, 2);
+
+        $this->assertTrue($result['has_more']);
+        $this->assertCount(2, $result['items']);
+        $this->assertSame('192.168.1.xxx', $result['items'][0]['ip_address']);
+    }
+
     public function testDeleteUrlByCodeSuccess(): void
     {
         $stmt = $this->createMockPdoStatement();
