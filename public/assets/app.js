@@ -41,13 +41,15 @@ document.querySelectorAll('.delete-form').forEach((form) => {
 const activityList = document.querySelector('#activity-list');
 const activityLoader = document.querySelector('#activity-loader');
 const activitySentinel = document.querySelector('#activity-sentinel');
+const activityLoadMore = document.querySelector('#activity-load-more');
 
-if (activityList && activityLoader && activitySentinel && activityLoader.dataset.hasMore === 'true') {
+if (activityList && activityLoader && activitySentinel && activityLoadMore && activityLoader.dataset.hasMore === 'true') {
     let loading = false;
 
     const appendActivityPage = async () => {
         if (loading || activityLoader.dataset.hasMore !== 'true') return;
         loading = true;
+        activityLoadMore.disabled = true;
         activityLoader.classList.remove('hidden');
         activityLoader.classList.add('flex');
 
@@ -72,15 +74,20 @@ if (activityList && activityLoader && activitySentinel && activityLoader.dataset
 
             activityLoader.dataset.nextPage = String(Number(page) + 1);
             activityLoader.dataset.hasMore = result.has_more ? 'true' : 'false';
+            activityLoadMore.hidden = !result.has_more;
         } catch (error) {
-            activityLoader.dataset.hasMore = 'false';
-            activityLoader.textContent = 'Aktivitas berikutnya gagal dimuat.';
+            activityLoader.dataset.hasMore = 'true';
+            activityLoadMore.hidden = false;
+            activityLoadMore.textContent = 'Coba muat lagi';
         } finally {
             loading = false;
+            activityLoadMore.disabled = false;
             if (activityLoader.dataset.hasMore !== 'true') activityLoader.classList.add('hidden');
             else activityLoader.classList.remove('flex');
         }
     };
+
+    activityLoadMore.addEventListener('click', appendActivityPage);
 
     new IntersectionObserver((entries) => {
         if (entries[0].isIntersecting) appendActivityPage();
