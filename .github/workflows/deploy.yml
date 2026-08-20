@@ -69,5 +69,14 @@ jobs:
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
-          ssh -o BatchMode=yes -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" "bash ${DEPLOY_PATH}/deploy.sh '${DEPLOY_PATH}'"
+          # Scan one key type only. Scanning every type opens several rapid
+          # connections and can trip the VPS SSH rate limiter before login.
+          ssh-keyscan -T 10 -t ed25519 -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          ssh \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            -o ServerAliveInterval=10 \
+            -o ServerAliveCountMax=3 \
+            -i ~/.ssh/deploy_key \
+            "${SSH_USER}@${SSH_HOST}" \
+            "bash ${DEPLOY_PATH}/deploy.sh '${DEPLOY_PATH}'"
