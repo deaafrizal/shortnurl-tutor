@@ -3,11 +3,21 @@ name: Deploy ShortnURL
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shortnurl-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test-and-deploy:
+  test:
     runs-on: ubuntu-latest
-    environment: vpsrumahweb
+    timeout-minutes: 10
 
     steps:
       - name: Checkout code
@@ -31,16 +41,24 @@ jobs:
           restore-keys: composer-
 
       - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
+        run: composer install --no-interaction --prefer-dist --no-progress
 
       - name: PHP syntax check
         run: |
-          find src config -name '*.php' -exec php -l {} \;
-          php -l public/index.php index.php
+          find src config public tests -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l index.php
 
       - name: Run tests
-        run: vendor/bin/phpunit
+        run: composer test
 
+  deploy:
+    name: Deploy to VPS
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: vpsrumahweb
+    steps:
       - name: Deploy to VPS
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
@@ -52,4 +70,4 @@ jobs:
           echo "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
-          ssh -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" "bash ${DEPLOY_PATH}/deploy.sh"
+          ssh -o BatchMode=yes -i ~/.ssh/deploy_key "${SSH_USER}@${SSH_HOST}" "bash ${DEPLOY_PATH}/deploy.sh '${DEPLOY_PATH}'"

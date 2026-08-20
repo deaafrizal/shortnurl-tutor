@@ -18,6 +18,6 @@
     },
     "scripts": {
         "test": "phpunit",
-        "lint": "php -l src/ config/ public/index.php index.php"
+        "lint": "find src config public -name '*.php' -print0 | xargs -0 -n1 php -l && php -l index.php"
     }
 }
