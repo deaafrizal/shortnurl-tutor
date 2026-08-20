@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes enter {
+    from { opacity: 0; transform: translateY(12px); }
+}
+
+.enter { animation: enter .45s cubic-bezier(.2, .8, .2, 1) both; }
+.glow { background-image: radial-gradient(circle at 50% -10%, rgba(99, 102, 241, .22), transparent 38%); }
+:focus-visible { outline: 3px solid rgba(129, 140, 248, .65); outline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; }
+}

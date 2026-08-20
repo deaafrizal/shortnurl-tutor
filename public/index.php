@@ -59,14 +59,7 @@ $escape = static fn ($value): string => htmlspecialchars((string) $value, ENT_QU
     <meta name="description" content="Pemendek URL cepat, sederhana, dan berfokus pada privasi.">
     <meta name="theme-color" content="#09090b">
     <title>DeaShortn — Tautan ringkas, tanpa ribet</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @keyframes enter { from { opacity:0; transform:translateY(12px) } }
-        .enter { animation:enter .45s cubic-bezier(.2,.8,.2,1) both }
-        .glow { background-image:radial-gradient(circle at 50% -10%,rgba(99,102,241,.22),transparent 38%) }
-        :focus-visible { outline:3px solid rgba(129,140,248,.65); outline-offset:3px }
-        @media(prefers-reduced-motion:reduce){*{animation:none!important}}
-    </style>
+    <link rel="stylesheet" href="/assets/app.css">
 </head>
 <body class="glow min-h-screen bg-zinc-950 text-zinc-100 antialiased selection:bg-indigo-500/30">
 <nav class="border-b border-white/5 bg-zinc-950/75 backdrop-blur-xl">
@@ -125,10 +118,6 @@ $escape = static fn ($value): string => htmlspecialchars((string) $value, ENT_QU
     </section>
     <footer class="mt-12 text-center text-xs text-zinc-700">Proyek edukasi keamanan web · Gunakan secara bertanggung jawab</footer>
 </main>
-<script>
-function copyText(text,button){const done=()=>{const label=button.textContent;button.textContent='Tersalin ✓';button.classList.add('text-emerald-400');setTimeout(()=>{button.textContent=label;button.classList.remove('text-emerald-400')},2000)};if(navigator.clipboard?.writeText)navigator.clipboard.writeText(text).then(done);else{const field=document.createElement('textarea');field.value=text;document.body.appendChild(field);field.select();document.execCommand('copy');field.remove();done()}}
-document.querySelectorAll('.copy-button').forEach(button=>button.addEventListener('click',()=>copyText(button.dataset.copy,button)));
-document.querySelectorAll('.delete-form').forEach(form=>form.addEventListener('submit',event=>{if(!confirm('Hapus tautan pendek ini?'))event.preventDefault()}));
-</script>
+<script src="/assets/app.js" defer></script>
 </body>
 </html>
